@@ -19,6 +19,11 @@ import {
   getTableTarget,
   getTableViewOffsetY,
 } from "@/lib/tableDisplay";
+import {
+  getProductArcLayout,
+  getProductDisplaySize,
+  PRODUCT_MODELS,
+} from "@/lib/productDisplay";
 
 interface JewelryHomeProps {
   visible: boolean;
@@ -84,6 +89,110 @@ function fitModelToSize(root: THREE.Object3D, targetSize: number) {
   }
 }
 
+function fitProductToSize(root: THREE.Object3D, targetSize: number) {
+  root.scale.set(1, 1, 1);
+  root.position.set(0, 0, 0);
+  root.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  if (maxDim > 0) {
+    root.scale.setScalar(targetSize / maxDim);
+  }
+
+  root.updateMatrixWorld(true);
+  const fitted = new THREE.Box3().setFromObject(root);
+  const center = fitted.getCenter(new THREE.Vector3());
+  root.position.set(-center.x, -fitted.min.y, -center.z);
+}
+
+function enhanceProductMaterials(root: THREE.Object3D) {
+  root.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.castShadow = true;
+    mesh.receiveShadow = false;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mats.forEach((mat) => {
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 1.4;
+      if ("metalness" in mat && typeof mat.metalness === "number") {
+        mat.metalness = Math.min(1, mat.metalness + 0.08);
+      }
+      if ("roughness" in mat && typeof mat.roughness === "number") {
+        mat.roughness = Math.max(0.08, mat.roughness * 0.85);
+      }
+    });
+  });
+}
+
+function ProductModel({
+  url,
+  position,
+  rotation,
+  displaySize,
+}: {
+  url: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  displaySize: number;
+}) {
+  const { scene } = useGLTF(url);
+  const productRoot = useMemo(() => scene.clone(true), [scene]);
+
+  useLayoutEffect(() => {
+    fitProductToSize(productRoot, displaySize);
+    enhanceProductMaterials(productRoot);
+  }, [productRoot, displaySize]);
+
+  return (
+    <group position={position} rotation={rotation}>
+      <primitive object={productRoot} />
+    </group>
+  );
+}
+
+function TableProducts({ surfaceY }: { surfaceY: number }) {
+  const { size } = useThree();
+  const displaySize = useMemo(
+    () => getProductDisplaySize(size.width, size.height),
+    [size.width, size.height],
+  );
+  const layout = useMemo(
+    () => getProductArcLayout(surfaceY, size.width, size.height, displaySize),
+    [surfaceY, size.width, size.height, displaySize],
+  );
+
+  return (
+    <group>
+      <pointLight
+        position={[0, surfaceY + 0.18, 0.32]}
+        intensity={0.72}
+        color="#FFF9F0"
+        distance={4.5}
+      />
+      <spotLight
+        position={[0, surfaceY + 0.35, 0.45]}
+        angle={0.55}
+        penumbra={0.85}
+        intensity={1.1}
+        color="#FFFFFF"
+        distance={5}
+      />
+      {layout.map((item) => (
+        <Suspense key={item.url} fallback={null}>
+          <ProductModel
+            url={item.url}
+            position={item.position}
+            rotation={item.rotation}
+            displaySize={item.displaySize}
+          />
+        </Suspense>
+      ))}
+    </group>
+  );
+}
+
 function ResponsiveCamera() {
   const { size, camera } = useThree();
   const cam = getTableCamera(size.width);
@@ -107,7 +216,13 @@ function ResponsiveCamera() {
   );
 }
 
-function TableModel({ onReady }: { onReady: () => void }) {
+function TableModel({
+  onReady,
+  onSurfaceY,
+}: {
+  onReady: () => void;
+  onSurfaceY: (y: number) => void;
+}) {
   const { scene } = useGLTF("/table-3d.glb");
   const groupRef = useRef<THREE.Group>(null);
   const { size } = useThree();
@@ -120,11 +235,15 @@ function TableModel({ onReady }: { onReady: () => void }) {
   useLayoutEffect(() => {
     fitModelToSize(tableRoot, targetScale);
     applyTableMaterials(tableRoot);
+
+    const box = new THREE.Box3().setFromObject(tableRoot);
+    onSurfaceY(tablePos[1] + box.max.y);
+
     if (!readyRef.current) {
       readyRef.current = true;
       onReady();
     }
-  }, [tableRoot, targetScale, onReady]);
+  }, [tableRoot, targetScale, tablePos, onReady, onSurfaceY]);
 
   return (
     <group ref={groupRef} position={tablePos}>
@@ -133,7 +252,15 @@ function TableModel({ onReady }: { onReady: () => void }) {
   );
 }
 
-function TableScene({ onReady }: { onReady: () => void }) {
+function TableScene({
+  onReady,
+  showProducts,
+}: {
+  onReady: () => void;
+  showProducts: boolean;
+}) {
+  const [surfaceY, setSurfaceY] = useState<number | null>(null);
+  const handleSurfaceY = useCallback((y: number) => setSurfaceY(y), []);
   const { size } = useThree();
   const target = getTableTarget(size.width);
   const shadow = getTableShadow(size.width);
@@ -178,7 +305,9 @@ function TableScene({ onReady }: { onReady: () => void }) {
       <pointLight position={[0, 1.2, 2.2]} intensity={0.4} color="#F5E6C8" distance={8} />
       <pointLight position={[0.5, 0.6, 1.4]} intensity={0.35} color="#FAECC8" distance={5} />
 
-      <TableModel onReady={onReady} />
+      <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} />
+
+      {surfaceY !== null && showProducts && <TableProducts surfaceY={surfaceY} />}
 
       <ContactShadows
         position={[0, shadow.groundY, 0.24]}
@@ -205,15 +334,16 @@ function TableLoader() {
 }
 
 export default function JewelryHome({ visible }: JewelryHomeProps) {
-  const [loading, setLoading] = useState(true);
+  const [tableReady, setTableReady] = useState(false);
   const [mobile, setMobile] = useState(false);
-  const handleReady = useCallback(() => setLoading(false), []);
+  const handleReady = useCallback(() => setTableReady(true), []);
 
   useEffect(() => {
     const sync = () => setMobile(window.innerWidth < 768);
     sync();
     window.addEventListener("resize", sync);
     useGLTF.preload("/table-3d.glb");
+    PRODUCT_MODELS.forEach((url) => useGLTF.preload(url));
     return () => window.removeEventListener("resize", sync);
   }, []);
 
@@ -222,13 +352,13 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
       className="shop-table-layer absolute inset-0"
       style={{
         opacity: visible ? 1 : 0,
-        pointerEvents: visible && !loading ? "auto" : "none",
+        pointerEvents: visible && tableReady ? "auto" : "none",
         transition: "opacity 1s cubic-bezier(0.22, 1, 0.36, 1) 0.1s",
-        cursor: visible && !loading ? "grab" : "default",
+        cursor: visible && tableReady ? "grab" : "default",
       }}
       onWheel={(e) => e.preventDefault()}
     >
-      {loading && <TableLoader />}
+      {visible && !tableReady && <TableLoader />}
 
       <Canvas
         shadows={!mobile}
@@ -249,7 +379,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
         }}
       >
         <Suspense fallback={null}>
-          <TableScene onReady={handleReady} />
+          <TableScene onReady={handleReady} showProducts={tableReady} />
         </Suspense>
       </Canvas>
     </div>

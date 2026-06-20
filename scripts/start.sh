@@ -17,4 +17,4 @@ echo "Clearing Next.js cache..."
 rm -rf .next node_modules/.cache .turbo
 
 echo "Starting MAJ Boutique..."
-exec npm run dev -- -H 127.0.0.1 -p 3000
+exec npm run dev

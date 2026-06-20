@@ -83,7 +83,7 @@ body {
     transform: scale(1);
   }
   100% {
-    transform: scale(1.14);
+    transform: scale(1.12);
   }
 }
 
@@ -92,7 +92,7 @@ body {
     transform: scale(1);
   }
   100% {
-    transform: scale(1.16);
+    transform: scale(1.14);
   }
 }
 
@@ -112,9 +112,9 @@ body {
 
 .shop-experience-bg__zoom {
   position: absolute;
-  inset: -10%;
+  inset: -12%;
   transform-origin: center center;
-  animation: shopBgZoom 24s ease-in-out infinite alternate;
+  animation: shopBgZoom 28s cubic-bezier(0.22, 0.61, 0.36, 1) infinite alternate;
   will-change: transform;
   background-image: url("/background.png");
   background-size: cover;
@@ -129,8 +129,8 @@ body {
 
 @media (max-width: 767px) {
   .shop-experience-bg__zoom {
-    inset: -11%;
-    animation: shopBgZoomMobile 24s ease-in-out infinite alternate;
+    inset: -13%;
+    animation: shopBgZoomMobile 28s cubic-bezier(0.22, 0.61, 0.36, 1) infinite alternate;
     background-image: url("/main_mob_bg.png");
     background-position: center 58%;
   }
