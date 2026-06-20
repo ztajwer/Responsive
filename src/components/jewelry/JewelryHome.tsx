@@ -36,6 +36,7 @@ const TABLE_LEG_COLOR = colors.tableLeg;
 const TABLE_HEIGHT_FRACTION = 0.44;
 const TABLE_CENTER_NDC_TARGET = 0.08;
 const PRODUCT_STAGGER_MS = 220;
+const HOVER_LIFT = 0.048;
 
 function getTableCenterY(root: THREE.Object3D, tablePos: [number, number, number]) {
   const box = new THREE.Box3().setFromObject(root);
@@ -252,9 +253,6 @@ function enhanceProductMaterials(root: THREE.Object3D) {
   });
 }
 
-const PRODUCT_STAGGER_MS = 220;
-const HOVER_LIFT = 0.048;
-const HOVER_SCALE = 1.08;
 const GLITTER_COUNT = 16;
 
 interface ProductBounds {
