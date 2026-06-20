@@ -1,12 +1,9 @@
-import type { GLTFLoader } from "three-stdlib";
+import { GLB_CDN_BASE } from "./glbConfig";
 
 /**
  * 3D models live in Git LFS. Vercel serves ~134-byte pointer files from /public,
  * so production loads real binaries from GitHub's LFS media CDN instead.
  */
-export const GLB_CDN_BASE =
-  "https://media.githubusercontent.com/media/ztajwer/Responsive/main/public";
-
 const PRODUCT_FILES = ["pro1.glb", "pro2.glb", "pro3.glb", "pro4.glb", "pro5.glb"] as const;
 
 function isLocalDevHost(): boolean {
@@ -42,6 +39,6 @@ export function getProductModelUrls(): readonly string[] {
   return PRODUCT_FILES.map((file) => getModelUrl(file));
 }
 
-export function extendGltfLoader(loader: GLTFLoader) {
+export function extendGltfLoader(loader: { setCrossOrigin: (mode: string) => void }) {
   loader.setCrossOrigin("anonymous");
 }

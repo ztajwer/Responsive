@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import SeoJsonLd from "@/components/SeoJsonLd";
 import { siteConfig } from "@/lib/site";
-import { GLB_CDN_BASE } from "@/lib/modelAssets";
+import { GLB_CDN_BASE } from "@/lib/glbConfig";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
