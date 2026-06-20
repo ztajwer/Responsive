@@ -96,7 +96,7 @@ function applyTableMaterials(root: THREE.Object3D) {
         mat.color.set("#FFFEF9");
         if ("metalness" in mat) mat.metalness = 0.05;
         if ("roughness" in mat) mat.roughness = 0.04;
-        if ("envMapIntensity" in mat) mat.envMapIntensity = 0.12;
+        if ("envMapIntensity" in mat) mat.envMapIntensity = 0.22;
         return;
       }
 
@@ -106,11 +106,11 @@ function applyTableMaterials(root: THREE.Object3D) {
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#FFF6E8").multiplyScalar(isLeg ? 0.016 : 0.024);
+        mat.emissive.set("#FFF8EE").multiplyScalar(isLeg ? 0.028 : 0.04);
       }
-      if ("metalness" in mat) mat.metalness = isLeg ? 0.02 : 0.015;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.74 : 0.7;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.08;
+      if ("metalness" in mat) mat.metalness = isLeg ? 0.03 : 0.02;
+      if ("roughness" in mat) mat.roughness = isLeg ? 0.68 : 0.62;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.14;
     });
   });
 }
@@ -235,9 +235,9 @@ function setupProductShadows(root: THREE.Object3D) {
         mat.metalness = THREE.MathUtils.clamp(mat.metalness, 0.08, 0.55);
       }
       if ("roughness" in mat && typeof mat.roughness === "number") {
-        mat.roughness = THREE.MathUtils.clamp(mat.roughness, 0.38, 0.72);
+        mat.roughness = THREE.MathUtils.clamp(mat.roughness * 0.88, 0.28, 0.62);
       }
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.24;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.34;
     });
   });
 }
@@ -493,8 +493,8 @@ function TableProducts({
     <group>
       <pointLight
         position={[0, surfaceY + 0.14, 0.48]}
-        intensity={0.38}
-        color="#FFF6EC"
+        intensity={0.52}
+        color="#FFFAF2"
         distance={4.2}
       />
       {visibleLayout.map((item) => (
@@ -626,13 +626,13 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.52 : 0.48} color="#FFF8F0" />
-      <hemisphereLight args={["#FFFCF6", "#7A5E3E", mobile ? 0.31 : 0.29]} />
+      <ambientLight intensity={mobile ? 0.62 : 0.58} color="#FFFBF5" />
+      <hemisphereLight args={["#FFFFFF", "#8A6848", mobile ? 0.4 : 0.38]} />
 
       <directionalLight
         position={[0.2, 4.8, 2.8]}
-        intensity={mobile ? 0.78 : 0.82}
-        color="#FFF6EE"
+        intensity={mobile ? 0.95 : 1.0}
+        color="#FFFAF4"
         castShadow={!mobile}
         shadow-mapSize={[512, 512]}
         shadow-camera-far={10}
@@ -710,7 +710,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
           gl.shadowMap.enabled = !mobile;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = mobile ? 0.99 : 0.97;
+          gl.toneMappingExposure = mobile ? 1.06 : 1.04;
           gl.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >
