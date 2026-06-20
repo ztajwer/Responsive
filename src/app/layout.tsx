@@ -102,6 +102,7 @@ export default function RootLayout({
           as="fetch"
           crossOrigin="anonymous"
         />
+        <link rel="preload" href="/wh_logo-removebg-preview.png" as="image" />
         <link rel="preload" href="/background.png" as="image" />
         <link rel="preload" href="/main_mob_bg.png" as="image" />
       </head>

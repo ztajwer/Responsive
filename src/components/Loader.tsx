@@ -75,15 +75,15 @@ export default function Loader({ onComplete }: LoaderProps) {
         <div className="loader-stack animate-fade-up">
           <div className="loader-logo-wrap">
             <div className="relative">
-              <div className="absolute -inset-6 rounded-full bg-maj-gold/20 blur-3xl sm:-inset-10 md:-inset-12" />
-              <div className="loader-logo-size relative overflow-hidden rounded-full border-2 border-maj-gold/45 bg-[#f8f8f8] shadow-[0_0_56px_rgba(212,175,55,0.38)] ring-2 ring-maj-gold/20">
+              <div className="absolute -inset-10 rounded-full bg-maj-gold/18 blur-3xl sm:-inset-12" />
+              <div className="loader-logo-size relative">
                 <Image
-                  src="/wh_logo.png"
+                  src="/wh_logo-removebg-preview.png"
                   alt="MAJ Boutique"
                   fill
                   priority
                   sizes="(max-width: 640px) 72vw, (max-width: 768px) 48vw, 320px"
-                  className="object-contain object-center p-[12%] sm:p-6"
+                  className="object-contain object-center drop-shadow-[0_8px_28px_rgba(212,175,55,0.28)]"
                 />
               </div>
             </div>

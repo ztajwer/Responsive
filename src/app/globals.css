@@ -255,16 +255,16 @@ body {
 }
 
 .loader-logo-size {
-  width: clamp(7.5rem, min(72vw, 34dvh), 20rem);
-  height: clamp(7.5rem, min(72vw, 34dvh), 20rem);
-  aspect-ratio: 1;
+  width: clamp(9rem, min(68vw, 32dvh), 18rem);
+  height: clamp(10.5rem, min(78vw, 38dvh), 21rem);
+  aspect-ratio: 5 / 6;
   flex-shrink: 0;
 }
 
 @media (min-width: 640px) {
   .loader-logo-size {
-    width: clamp(10.5rem, min(48vw, 38dvh), 20rem);
-    height: clamp(10.5rem, min(48vw, 38dvh), 20rem);
+    width: clamp(11rem, min(44vw, 36dvh), 18rem);
+    height: clamp(12.5rem, min(50vw, 42dvh), 21rem);
   }
 }
 
@@ -282,8 +282,8 @@ body {
   }
 
   .loader-logo-size {
-    width: clamp(5rem, 28dvh, 9rem);
-    height: clamp(5rem, 28dvh, 9rem);
+    width: clamp(6.5rem, 26dvh, 10rem);
+    height: clamp(7.5rem, 30dvh, 11.5rem);
   }
 
   .loader-progress {
