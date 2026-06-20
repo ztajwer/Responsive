@@ -17,8 +17,7 @@ import {
   getTableScale,
   getTableShadow,
   getTableTarget,
-  getTableViewOffsetY,
-  getTableViewOffsetPx,
+  getTableViewFraming,
 } from "@/lib/tableDisplay";
 import {
   getProductArcLayout,
@@ -401,15 +400,14 @@ function ResponsiveCamera() {
     camera.far = 100;
     camera.lookAt(...target);
 
-    const offsetY = getTableViewOffsetY(size.width, size.height);
-    const offsetPx = getTableViewOffsetPx(size.width);
+    const framing = getTableViewFraming(size.width, size.height);
     camera.setViewOffset(
-      size.width,
-      size.height,
-      0,
-      size.height * offsetY + offsetPx,
-      size.width,
-      size.height,
+      framing.fullWidth,
+      framing.fullHeight,
+      framing.offsetX,
+      framing.offsetY,
+      framing.width,
+      framing.height,
     );
     camera.updateProjectionMatrix();
   }, [camera, size.width, size.height, cam.fov, cam.position, target]);

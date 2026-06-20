@@ -1,26 +1,25 @@
-/** Locked front-facing orbit (π/2 = straight-on view, no tilt). */
-export const TABLE_POLAR_ANGLE = Math.PI / 2;
+export const TABLE_POLAR_ANGLE = 1.555;
 
 export const TABLE_DISPLAY = {
   position: {
-    mobile: [0, -0.1, 0.34] as [number, number, number],
+    mobile: [0, 0, 0.34] as [number, number, number],
     tablet: [0, 0, 0.31] as [number, number, number],
     desktop: [0, 0, 0.3] as [number, number, number],
   },
   target: {
-    mobile: [0, 0.04, 0.34] as [number, number, number],
-    tablet: [0, 0.12, 0.31] as [number, number, number],
-    desktop: [0, 0.13, 0.3] as [number, number, number],
+    mobile: [0, 0.12, 0.3] as [number, number, number],
+    tablet: [0, 0.14, 0.28] as [number, number, number],
+    desktop: [0, 0.15, 0.27] as [number, number, number],
   },
   scale: {
-    mobile: 0.78,
+    mobile: 0.8,
     tablet: 0.54,
     desktop: 0.5,
   },
   camera: {
-    mobile: { position: [0, 0.04, 2.0] as [number, number, number], fov: 42 },
-    tablet: { position: [0, 0.12, 3.08] as [number, number, number], fov: 32 },
-    desktop: { position: [0, 0.13, 3.18] as [number, number, number], fov: 30 },
+    mobile: { position: [0, 0.13, 2.02] as [number, number, number], fov: 40 },
+    tablet: { position: [0, 0.17, 3.1] as [number, number, number], fov: 33 },
+    desktop: { position: [0, 0.17, 3.2] as [number, number, number], fov: 31 },
   },
   shadow: {
     scale: { mobile: 2.35, tablet: 1.9, desktop: 1.7 },
@@ -28,13 +27,22 @@ export const TABLE_DISPLAY = {
     blur: { mobile: 4.8, tablet: 4.2, desktop: 3.6 },
     groundY: 0.002,
   },
-  /** Camera crop — higher = table lower on screen. */
-  viewOffsetY: { mobile: 0.68, tablet: 0.24, desktop: 0.16 },
-  /** Extra downward shift in pixels (mobile). */
-  viewOffsetPx: { mobile: 110, tablet: 0, desktop: 0 },
+  viewOffsetY: { mobile: 0.1, tablet: 0.18, desktop: 0.12 },
+  /** Mobile-only: expand virtual film height so table locks to bottom edge. */
+  mobileFilmScale: 1.82,
+  mobileBottomInsetPx: 6,
 } as const;
 
 export type TableBreakpoint = "mobile" | "tablet" | "desktop";
+
+export interface TableViewFraming {
+  fullWidth: number;
+  fullHeight: number;
+  offsetX: number;
+  offsetY: number;
+  width: number;
+  height: number;
+}
 
 export function getTableBreakpoint(width: number): TableBreakpoint {
   if (width < 768) return "mobile";
@@ -46,8 +54,8 @@ export function getTableScale(width: number, height = width) {
   const bp = getTableBreakpoint(width);
   const base = TABLE_DISPLAY.scale[bp];
   if (bp !== "mobile" || height <= 0) return base;
-  if (height < 680) return base + 0.06;
-  if (height < 820) return base + 0.04;
+  if (height < 680) return base + 0.04;
+  if (height < 820) return base + 0.02;
   return base;
 }
 
@@ -79,7 +87,7 @@ export function getTableViewOffsetY(width: number, height = width) {
   if (height <= 0) return base;
 
   if (bp === "mobile" && height < 680) {
-    return base + 0.06;
+    return base + 0.04;
   }
 
   if (bp === "tablet" && height < 720) {
@@ -89,6 +97,31 @@ export function getTableViewOffsetY(width: number, height = width) {
   return base;
 }
 
-export function getTableViewOffsetPx(width: number): number {
-  return TABLE_DISPLAY.viewOffsetPx[getTableBreakpoint(width)];
+/** setViewOffset args — mobile crops to bottom strip so table sits on screen bottom. */
+export function getTableViewFraming(viewWidth: number, viewHeight: number): TableViewFraming {
+  if (getTableBreakpoint(viewWidth) === "mobile" && viewHeight > 0) {
+    const fullHeight = viewHeight * TABLE_DISPLAY.mobileFilmScale;
+    const offsetY = Math.max(
+      0,
+      fullHeight - viewHeight - TABLE_DISPLAY.mobileBottomInsetPx,
+    );
+    return {
+      fullWidth: viewWidth,
+      fullHeight,
+      offsetX: 0,
+      offsetY,
+      width: viewWidth,
+      height: viewHeight,
+    };
+  }
+
+  const offsetY = getTableViewOffsetY(viewWidth, viewHeight);
+  return {
+    fullWidth: viewWidth,
+    fullHeight: viewHeight,
+    offsetX: 0,
+    offsetY: viewHeight * offsetY,
+    width: viewWidth,
+    height: viewHeight,
+  };
 }
