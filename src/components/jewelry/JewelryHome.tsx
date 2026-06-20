@@ -38,7 +38,7 @@ const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
 /** Medium table — center, slightly below middle */
 const TABLE_HEIGHT_FRACTION = 0.26;
-const TABLE_CENTER_NDC_TARGET = -0.12;
+const TABLE_CENTER_NDC_TARGET = -0.28;
 const PRODUCT_STAGGER_MS = 900;
 const PRODUCT_START_DELAY_MS = 700;
 const HOVER_LIFT = 0.044;
