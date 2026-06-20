@@ -31,9 +31,9 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Big table, vertically centered in the canvas band */
-const TABLE_HEIGHT_FRACTION = 0.36;
-const TABLE_CENTER_NDC_TARGET = 0;
+/** Big table, upper-center of the viewport (full-screen canvas on mobile) */
+const TABLE_HEIGHT_FRACTION = 0.3;
+const TABLE_CENTER_NDC_TARGET = 0.1;
 
 function getTableCenterY(root: THREE.Object3D, tablePos: [number, number, number]) {
   const box = new THREE.Box3().setFromObject(root);
@@ -126,8 +126,8 @@ function fitTableToSize(root: THREE.Object3D, targetSize: number) {
     root.scale.setScalar(targetSize / maxDim);
   }
 
-  root.scale.x *= 1.14;
-  root.scale.z *= 1.08;
+  root.scale.x *= 1.18;
+  root.scale.z *= 1.12;
 
   root.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(root);

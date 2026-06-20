@@ -18,7 +18,7 @@ export function getProductTargetPixels(
   viewportHeight = viewportWidth,
 ): number {
   if (viewportWidth < 768) {
-    return viewportHeight < 360 ? 132 : 156;
+    return viewportHeight < 360 ? 148 : 172;
   }
   if (viewportWidth < 1024) return 168;
   return 186;
@@ -39,7 +39,7 @@ export function getProductDisplaySize(
   );
 
   const worldSize = worldSizeFromPixels(targetPixels, viewportHeight, cam.fov, distance);
-  const maxWorld = viewportWidth < 768 ? 0.23 : viewportWidth < 1024 ? 0.22 : 0.22;
+  const maxWorld = viewportWidth < 768 ? 0.26 : viewportWidth < 1024 ? 0.24 : 0.24;
 
   return Math.min(worldSize, maxWorld);
 }

@@ -147,9 +147,11 @@ body {
   }
 
   .shop-table-layer {
-    height: min(50vh, 440px);
-    min-height: 320px;
-    max-height: 460px;
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    min-height: 100%;
+    max-height: none;
   }
 }
 
