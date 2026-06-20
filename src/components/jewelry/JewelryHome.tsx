@@ -31,7 +31,9 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-const TABLE_BOTTOM_NDC_TARGET = -0.94;
+/** Table base sits 20% above the bottom edge of the canvas band */
+const TABLE_BOTTOM_FROM_EDGE = 0.2;
+const TABLE_BOTTOM_NDC_TARGET = -1 + 2 * TABLE_BOTTOM_FROM_EDGE;
 
 function resolveTableViewOffsetY(
   camera: THREE.PerspectiveCamera,
