@@ -20,8 +20,10 @@ function worldSizeFromPixels(
   return (pixels / viewportHeight) * visibleHeight;
 }
 
-export function getProductTargetPixels(_viewportWidth: number): number {
-  return 185;
+export function getProductTargetPixels(viewportWidth: number): number {
+  if (viewportWidth < 768) return 171;
+  if (viewportWidth < 1024) return 189;
+  return 200;
 }
 
 export function getProductDisplaySize(
@@ -39,7 +41,7 @@ export function getProductDisplaySize(
   );
 
   const worldSize = worldSizeFromPixels(targetPixels, viewportHeight, cam.fov, distance);
-  const maxWorld = viewportWidth < 768 ? 0.3 : 0.26;
+  const maxWorld = viewportWidth < 768 ? 0.189 : viewportWidth < 1024 ? 0.21 : 0.224;
 
   return Math.min(worldSize, maxWorld);
 }
@@ -60,16 +62,16 @@ export function getProductArcLayout(
 ): ProductArcItem[] {
   const mobile = viewportWidth < 768;
   const count = PRODUCT_MODELS.length;
-  const arcRadius = Math.max(mobile ? 0.32 : 0.38, displaySize * (mobile ? 2.4 : 2.7));
-  const arcSpread = mobile ? 1.08 : 1.15;
-  const forwardZ = mobile ? 0.28 : 0.32;
+  const arcRadius = Math.max(mobile ? 0.34 : 0.4, displaySize * (mobile ? 2.9 : 3.2));
+  const arcSpread = mobile ? 1.18 : 1.24;
+  const forwardZ = mobile ? 0.36 : 0.4;
   const liftAboveTable = mobile ? 0.045 : 0.038;
 
   return PRODUCT_MODELS.map((url, index) => {
     const t = index / (count - 1);
     const angle = (t - 0.5) * arcSpread;
     const x = Math.sin(angle) * arcRadius;
-    const z = forwardZ + Math.cos(angle) * arcRadius * 0.22;
+    const z = forwardZ + Math.cos(angle) * arcRadius * 0.16;
 
     return {
       url,

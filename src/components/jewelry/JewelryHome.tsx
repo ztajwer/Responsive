@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
   ContactShadows,
   Environment,
@@ -126,6 +126,123 @@ function enhanceProductMaterials(root: THREE.Object3D) {
   });
 }
 
+const HOVER_LIFT = 0.042;
+const HOVER_SCALE = 1.06;
+const GLITTER_COUNT = 34;
+
+interface ProductBounds {
+  radius: number;
+  height: number;
+}
+
+interface GlitterParticle {
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  life: number;
+  maxLife: number;
+}
+
+function ProductGlitter({
+  active,
+  radius,
+  height,
+}: {
+  active: boolean;
+  radius: number;
+  height: number;
+}) {
+  const pointsRef = useRef<THREE.Points>(null);
+  const intensityRef = useRef(0);
+  const particles = useRef<GlitterParticle[]>(
+    Array.from({ length: GLITTER_COUNT }, () => ({
+      x: 0,
+      y: 0,
+      z: 0,
+      vx: 0,
+      vy: 0,
+      vz: 0,
+      life: 1,
+      maxLife: 1,
+    })),
+  );
+
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(GLITTER_COUNT * 3), 3));
+    return geo;
+  }, []);
+
+  useFrame((_, delta) => {
+    intensityRef.current = THREE.MathUtils.lerp(
+      intensityRef.current,
+      active ? 1 : 0,
+      Math.min(1, delta * 9),
+    );
+
+    const points = pointsRef.current;
+    if (!points || intensityRef.current < 0.02) return;
+
+    const pos = points.geometry.attributes.position as THREE.BufferAttribute;
+    const arr = pos.array as Float32Array;
+    const spawnRate = intensityRef.current * delta * 16;
+
+    for (let i = 0; i < GLITTER_COUNT; i++) {
+      const p = particles.current[i];
+
+      if (p.life >= p.maxLife) {
+        if (Math.random() < spawnRate) {
+          p.x = (Math.random() - 0.5) * radius * 1.7;
+          p.y = height * (0.5 + Math.random() * 0.5);
+          p.z = (Math.random() - 0.5) * radius * 1.7;
+          p.vx = (Math.random() - 0.5) * 0.14;
+          p.vy = -(0.18 + Math.random() * 0.28);
+          p.vz = (Math.random() - 0.5) * 0.14;
+          p.life = 0;
+          p.maxLife = 0.45 + Math.random() * 0.55;
+        } else {
+          arr[i * 3 + 1] = -100;
+          continue;
+        }
+      }
+
+      p.life += delta;
+      p.x += p.vx * delta;
+      p.y += p.vy * delta;
+      p.z += p.vz * delta;
+      p.vy -= delta * 0.55;
+
+      if (p.life < p.maxLife && p.y > -0.04) {
+        arr[i * 3] = p.x;
+        arr[i * 3 + 1] = p.y;
+        arr[i * 3 + 2] = p.z;
+      } else {
+        p.life = p.maxLife;
+        arr[i * 3 + 1] = -100;
+      }
+    }
+
+    pos.needsUpdate = true;
+  });
+
+  return (
+    <points ref={pointsRef} geometry={geometry} frustumCulled={false}>
+      <pointsMaterial
+        size={0.016}
+        color="#FFF6D8"
+        transparent
+        opacity={0.92}
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+        sizeAttenuation
+      />
+    </points>
+  );
+}
+
 function ProductModel({
   url,
   position,
@@ -137,17 +254,86 @@ function ProductModel({
   rotation: [number, number, number];
   displaySize: number;
 }) {
-  const { scene } = useGLTF(url);
-  const productRoot = useMemo(() => scene.clone(true), [scene]);
+  const { gl } = useThree();
+  const groupRef = useRef<THREE.Group>(null);
+  const glowRef = useRef<THREE.PointLight>(null);
+  const hoverRef = useRef(0);
+  const [hovered, setHovered] = useState(false);
+  const [bounds, setBounds] = useState<ProductBounds>({
+    radius: displaySize * 0.35,
+    height: displaySize * 0.5,
+  });
+  const { scene: modelScene } = useGLTF(url);
+  const productRoot = useMemo(() => modelScene.clone(true), [modelScene]);
 
   useLayoutEffect(() => {
     fitProductToSize(productRoot, displaySize);
     enhanceProductMaterials(productRoot);
+
+    const box = new THREE.Box3().setFromObject(productRoot);
+    const size = box.getSize(new THREE.Vector3());
+    setBounds({
+      radius: Math.max(size.x, size.z) * 0.52,
+      height: size.y,
+    });
   }, [productRoot, displaySize]);
 
+  useFrame((_, delta) => {
+    const target = hovered ? 1 : 0;
+    hoverRef.current = THREE.MathUtils.lerp(hoverRef.current, target, Math.min(1, delta * 11));
+    const t = hoverRef.current;
+
+    if (!groupRef.current) return;
+    groupRef.current.position.set(position[0], position[1] + t * HOVER_LIFT, position[2]);
+    groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2]);
+    groupRef.current.scale.setScalar(1 + t * (HOVER_SCALE - 1));
+
+    if (glowRef.current) {
+      glowRef.current.intensity = t * 1.35;
+    }
+  });
+
+  const handlePointerOver = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      event.stopPropagation();
+      setHovered(true);
+      gl.domElement.style.cursor = "pointer";
+    },
+    [gl],
+  );
+
+  const handlePointerOut = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      event.stopPropagation();
+      setHovered(false);
+      gl.domElement.style.cursor = "grab";
+    },
+    [gl],
+  );
+
   return (
-    <group position={position} rotation={rotation}>
+    <group ref={groupRef} position={position} rotation={rotation}>
       <primitive object={productRoot} />
+
+      <mesh
+        position={[0, bounds.height * 0.5, 0]}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
+        visible={false}
+      >
+        <boxGeometry args={[bounds.radius * 2.1, bounds.height * 1.08, bounds.radius * 2.1]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+
+      <ProductGlitter active={hovered} radius={bounds.radius} height={bounds.height} />
+
+      <pointLight
+        ref={glowRef}
+        position={[0, bounds.height * 0.55, 0]}
+        intensity={0}
+        color="#FFF4D6"
+        distance={displaySize * 5}
+      />
     </group>
   );
 }
@@ -166,13 +352,13 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
   return (
     <group>
       <pointLight
-        position={[0, surfaceY + 0.18, 0.32]}
+        position={[0, surfaceY + 0.18, 0.4]}
         intensity={0.72}
         color="#FFF9F0"
         distance={4.5}
       />
       <spotLight
-        position={[0, surfaceY + 0.35, 0.45]}
+        position={[0, surfaceY + 0.35, 0.53]}
         angle={0.55}
         penumbra={0.85}
         intensity={1.1}
@@ -310,7 +496,7 @@ function TableScene({
       {surfaceY !== null && showProducts && <TableProducts surfaceY={surfaceY} />}
 
       <ContactShadows
-        position={[0, shadow.groundY, 0.24]}
+        position={[0, shadow.groundY, 0.32]}
         opacity={shadow.opacity}
         scale={shadow.scale}
         blur={shadow.blur}

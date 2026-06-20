@@ -83,7 +83,7 @@ body {
     transform: scale(1);
   }
   100% {
-    transform: scale(1.12);
+    transform: scale(1.06);
   }
 }
 
@@ -92,7 +92,7 @@ body {
     transform: scale(1);
   }
   100% {
-    transform: scale(1.14);
+    transform: scale(1.08);
   }
 }
 
@@ -263,6 +263,18 @@ body {
   height: clamp(7.5rem, min(72vw, 34dvh), 20rem);
   aspect-ratio: 1;
   flex-shrink: 0;
+}
+
+.loader-logo-outline {
+  z-index: 2;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.loader-logo-inner {
+  position: absolute;
+  inset: 17%;
+  z-index: 1;
 }
 
 @media (min-width: 640px) {
