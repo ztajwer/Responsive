@@ -31,19 +31,23 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Vertical band: top 85% clear, table ~10%, bottom 5% margin */
-const TABLE_TOP_CLEAR = 0.85;
-const TABLE_HEIGHT_FRACTION = 0.1;
-const TABLE_BOTTOM_MARGIN = 1 - TABLE_TOP_CLEAR - TABLE_HEIGHT_FRACTION;
-const TABLE_BOTTOM_NDC_TARGET = -1 + 2 * TABLE_BOTTOM_MARGIN;
+/** Big table, vertically centered in the canvas band */
+const TABLE_HEIGHT_FRACTION = 0.36;
+const TABLE_CENTER_NDC_TARGET = 0;
+
+function getTableCenterY(root: THREE.Object3D, tablePos: [number, number, number]) {
+  const box = new THREE.Box3().setFromObject(root);
+  return tablePos[1] + (box.min.y + box.max.y) / 2;
+}
 
 function resolveTableViewOffsetY(
   camera: THREE.PerspectiveCamera,
   width: number,
   height: number,
   tablePos: [number, number, number],
+  tableCenterY: number,
 ) {
-  const anchor = new THREE.Vector3(0, tablePos[1], tablePos[2]);
+  const anchor = new THREE.Vector3();
   let low = -0.12;
   let high = 0.45;
 
@@ -51,10 +55,9 @@ function resolveTableViewOffsetY(
     const mid = (low + high) / 2;
     camera.setViewOffset(width, height, 0, height * mid, width, height);
     camera.updateProjectionMatrix();
-    anchor.set(0, tablePos[1], tablePos[2]);
-    anchor.project(camera);
+    anchor.set(0, tableCenterY, tablePos[2]).project(camera);
 
-    if (anchor.y > TABLE_BOTTOM_NDC_TARGET) {
+    if (anchor.y > TABLE_CENTER_NDC_TARGET) {
       high = mid;
     } else {
       low = mid;
@@ -123,8 +126,8 @@ function fitTableToSize(root: THREE.Object3D, targetSize: number) {
     root.scale.setScalar(targetSize / maxDim);
   }
 
-  root.scale.x *= 1.1;
-  root.scale.z *= 1.06;
+  root.scale.x *= 1.14;
+  root.scale.z *= 1.08;
 
   root.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(root);
@@ -561,9 +564,16 @@ function TableModel({
     applyTableMaterials(tableRoot);
 
     if (camera instanceof THREE.PerspectiveCamera) {
-      resolveTableViewOffsetY(camera, size.width, size.height, tablePos);
+      const centerY = getTableCenterY(tableRoot, tablePos);
+      resolveTableViewOffsetY(camera, size.width, size.height, tablePos, centerY);
       scaleTableToScreenBand(tableRoot, tablePos, camera, TABLE_HEIGHT_FRACTION);
-      resolveTableViewOffsetY(camera, size.width, size.height, tablePos);
+      resolveTableViewOffsetY(
+        camera,
+        size.width,
+        size.height,
+        tablePos,
+        getTableCenterY(tableRoot, tablePos),
+      );
     }
 
     const box = new THREE.Box3().setFromObject(tableRoot);
