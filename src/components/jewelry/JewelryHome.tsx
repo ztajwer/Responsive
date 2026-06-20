@@ -96,7 +96,7 @@ function applyTableMaterials(root: THREE.Object3D) {
         mat.color.set("#FFFEF9");
         if ("metalness" in mat) mat.metalness = 0.02;
         if ("roughness" in mat) mat.roughness = 0.14;
-        if ("envMapIntensity" in mat) mat.envMapIntensity = 0.06;
+        if ("envMapIntensity" in mat) mat.envMapIntensity = 0.15;
         return;
       }
 
@@ -107,11 +107,11 @@ function applyTableMaterials(root: THREE.Object3D) {
       mat.color.offsetHSL(0, 0.04, 0.06);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#000000");
+        mat.emissive.set("#FFF6EA").multiplyScalar(isLeg ? 0.015 : 0.022);
       }
-      if ("metalness" in mat) mat.metalness = 0;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.82 : 0.78;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.03;
+      if ("metalness" in mat) mat.metalness = isLeg ? 0.02 : 0.015;
+      if ("roughness" in mat) mat.roughness = isLeg ? 0.72 : 0.66;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.08;
     });
   });
 }
@@ -222,7 +222,7 @@ function fitProductToUniformSize(root: THREE.Object3D, targetHeight: number) {
   root.position.set(-center.x, -fitted.min.y, -center.z);
 }
 
-function setupProductColors(root: THREE.Object3D) {
+function setupProductMaterials(root: THREE.Object3D) {
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh || !mesh.material) return;
@@ -232,18 +232,38 @@ function setupProductColors(root: THREE.Object3D) {
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     mats.forEach((mat) => {
       if ("transparent" in mat && mat.transparent) return;
+
+      const name = (mesh.name + (mat.name || "")).toLowerCase();
+      const isGem =
+        name.includes("gem") ||
+        name.includes("stone") ||
+        name.includes("diamond") ||
+        name.includes("crystal");
+      const isMetal =
+        name.includes("gold") ||
+        name.includes("metal") ||
+        name.includes("ring") ||
+        name.includes("chain") ||
+        ("metalness" in mat && typeof mat.metalness === "number" && mat.metalness > 0.35);
+
       if ("color" in mat && mat.color instanceof THREE.Color) {
-        mat.color.offsetHSL(0, 0.05, 0.09);
+        mat.color.offsetHSL(0, 0.03, 0.08);
       }
+
       if ("metalness" in mat && typeof mat.metalness === "number") {
-        mat.metalness = 0;
+        if (isGem) mat.metalness = Math.min(mat.metalness, 0.12);
+        else if (isMetal) mat.metalness = Math.max(mat.metalness, 0.72);
+        else mat.metalness = THREE.MathUtils.clamp(mat.metalness, 0.15, 0.45);
       }
+
       if ("roughness" in mat && typeof mat.roughness === "number") {
-        mat.roughness = Math.max(mat.roughness, 0.72);
+        if (isGem) mat.roughness = Math.min(mat.roughness, 0.18);
+        else if (isMetal) mat.roughness = THREE.MathUtils.clamp(mat.roughness, 0.2, 0.35);
+        else mat.roughness = THREE.MathUtils.clamp(mat.roughness, 0.38, 0.58);
       }
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0;
-      if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#000000");
+
+      if ("envMapIntensity" in mat) {
+        mat.envMapIntensity = isGem ? 0.45 : isMetal ? 0.38 : 0.25;
       }
     });
   });
@@ -388,7 +408,7 @@ const ProductModel = memo(function ProductModel({
 
   useLayoutEffect(() => {
     fitProductToUniformSize(productRoot, displaySize);
-    setupProductColors(productRoot);
+    setupProductMaterials(productRoot);
 
     const box = new THREE.Box3().setFromObject(productRoot);
     const size = box.getSize(new THREE.Vector3());
@@ -614,13 +634,13 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.68 : 0.64} color="#FFFCF8" />
-      <hemisphereLight args={["#FFFCFA", "#8A6848", mobile ? 0.36 : 0.34]} />
+      <ambientLight intensity={mobile ? 0.78 : 0.74} color="#FFFCF8" />
+      <hemisphereLight args={["#FFFFFF", "#9A7650", mobile ? 0.48 : 0.46]} />
 
       <directionalLight
-        position={[0.2, 4.8, 2.8]}
-        intensity={mobile ? 0.62 : 0.66}
-        color="#FFF8F2"
+        position={[0.15, 5.2, 2.6]}
+        intensity={mobile ? 0.88 : 0.92}
+        color="#FFFAF5"
         castShadow={!mobile}
         shadow-mapSize={[512, 512]}
         shadow-camera-far={10}
@@ -631,7 +651,22 @@ function TableScene({
         shadow-bias={-0.0001}
       />
 
+      <directionalLight
+        position={[-0.4, 2.4, 1.1]}
+        intensity={mobile ? 0.42 : 0.46}
+        color="#FFF6EC"
+      />
+
       <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} onTableMetrics={handleTableMetrics} />
+
+      {surfaceY !== null && (
+        <pointLight
+          position={[0, surfaceY + 0.2, 0.52]}
+          intensity={0.62}
+          color="#FFF9F2"
+          distance={5.5}
+        />
+      )}
 
       {surfaceY !== null && tableTopWidth !== null && showProducts && (
         <TableProducts surfaceY={surfaceY} tableTopWidth={tableTopWidth} />
@@ -698,7 +733,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
           gl.shadowMap.enabled = !mobile;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = mobile ? 1.02 : 1.0;
+          gl.toneMappingExposure = mobile ? 1.1 : 1.08;
           gl.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >
