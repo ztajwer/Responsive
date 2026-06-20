@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import { useThree } from "@react-three/fiber";
 import { ContactShadows, Environment } from "@react-three/drei";
 import { PANEL_H } from "./GlassDoors";
 
@@ -20,6 +21,9 @@ interface SceneLightingProps {
 
 export default function SceneLighting({ brightness = 0 }: SceneLightingProps) {
   const b = brightness;
+  const { size } = useThree();
+  const mobile = size.width < 768;
+  const shadowMapSize = mobile ? 2048 : 1024;
 
   return (
     <>
@@ -31,7 +35,7 @@ export default function SceneLighting({ brightness = 0 }: SceneLightingProps) {
         intensity={1.05 + b * 0.75}
         color="#FFF8F2"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[shadowMapSize, shadowMapSize]}
         shadow-camera-left={-3.5}
         shadow-camera-right={3.5}
         shadow-camera-top={3.5}

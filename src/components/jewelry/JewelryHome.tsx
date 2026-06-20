@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
   ContactShadows,
   Environment,
   OrbitControls,
   PerspectiveCamera,
+  useCursor,
   useGLTF,
 } from "@react-three/drei";
 import * as THREE from "three";
@@ -243,7 +244,7 @@ function ProductGlitter({
   );
 }
 
-function ProductModel({
+const ProductModel = memo(function ProductModel({
   url,
   position,
   rotation,
@@ -259,6 +260,7 @@ function ProductModel({
   const glowRef = useRef<THREE.PointLight>(null);
   const hoverRef = useRef(0);
   const [hovered, setHovered] = useState(false);
+  useCursor(hovered);
   const [bounds, setBounds] = useState<ProductBounds>({
     radius: displaySize * 0.35,
     height: displaySize * 0.5,
@@ -311,6 +313,11 @@ function ProductModel({
     [gl],
   );
 
+  const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
+    setHovered(true);
+  }, []);
+
   return (
     <group ref={groupRef} position={position} rotation={rotation}>
       <primitive object={productRoot} />
@@ -319,9 +326,10 @@ function ProductModel({
         position={[0, bounds.height * 0.5, 0]}
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
+        onPointerDown={handlePointerDown}
         visible={false}
       >
-        <boxGeometry args={[bounds.radius * 2.1, bounds.height * 1.08, bounds.radius * 2.1]} />
+        <boxGeometry args={[bounds.radius * 2.35, bounds.height * 1.12, bounds.radius * 2.35]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
@@ -336,10 +344,11 @@ function ProductModel({
       />
     </group>
   );
-}
+});
 
 function TableProducts({ surfaceY }: { surfaceY: number }) {
   const { size } = useThree();
+  const [visibleCount, setVisibleCount] = useState(1);
   const displaySize = useMemo(
     () => getProductDisplaySize(size.width, size.height),
     [size.width, size.height],
@@ -347,6 +356,21 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
   const layout = useMemo(
     () => getProductArcLayout(surfaceY, size.width, size.height, displaySize),
     [surfaceY, size.width, size.height, displaySize],
+  );
+
+  useEffect(() => {
+    layout.slice(0, visibleCount).forEach((item) => useGLTF.preload(item.url));
+  }, [layout, visibleCount]);
+
+  useEffect(() => {
+    if (visibleCount >= layout.length) return;
+    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), 320);
+    return () => window.clearTimeout(id);
+  }, [visibleCount, layout.length]);
+
+  const visibleLayout = useMemo(
+    () => layout.slice(0, visibleCount),
+    [layout, visibleCount],
   );
 
   return (
@@ -365,7 +389,7 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
         color="#FFFFFF"
         distance={5}
       />
-      {layout.map((item) => (
+      {visibleLayout.map((item) => (
         <Suspense key={item.url} fallback={null}>
           <ProductModel
             url={item.url}
@@ -528,10 +552,13 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
     const sync = () => setMobile(window.innerWidth < 768);
     sync();
     window.addEventListener("resize", sync);
-    useGLTF.preload("/table-3d.glb");
-    PRODUCT_MODELS.forEach((url) => useGLTF.preload(url));
     return () => window.removeEventListener("resize", sync);
   }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    useGLTF.preload("/table-3d.glb");
+  }, [visible]);
 
   return (
     <div
@@ -548,7 +575,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
 
       <Canvas
         shadows={!mobile}
-        dpr={mobile ? [1, 1.5] : [1, 1.25]}
+        dpr={mobile ? [1, 1.5] : [1, 1.15]}
         className="h-full w-full"
         gl={{
           antialias: !mobile,

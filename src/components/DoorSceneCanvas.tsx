@@ -8,6 +8,7 @@ import GlassDoors from "./GlassDoors";
 import SceneLighting from "./SceneLighting";
 import LoadingBridge from "./LoadingBridge";
 import { DEFAULT_FRAME } from "@/lib/doorFraming";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
 
 function DoorSceneContent({
   progressRef,
@@ -38,6 +39,8 @@ export default function DoorSceneCanvas({
   brightness,
   opacity,
 }: DoorSceneCanvasProps) {
+  const isDesktop = useIsDesktop();
+
   return (
     <div
       className="door-scene-canvas fixed inset-0 z-[8]"
@@ -49,7 +52,7 @@ export default function DoorSceneCanvas({
     >
       <Canvas
         shadows
-        dpr={[1, 2]}
+        dpr={isDesktop ? [1, 1.5] : [1, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         style={{ width: "100%", height: "100%" }}
         onCreated={({ gl }) => {

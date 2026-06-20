@@ -144,12 +144,17 @@ export default function CursorGlitterTrail() {
       if (touch) spawn(touch.clientX, touch.clientY);
     };
 
-    window.addEventListener("mousemove", onMove, { passive: true });
+    const desktopFinePointer = window.matchMedia("(min-width: 768px) and (pointer: fine)").matches;
+    if (desktopFinePointer) {
+      window.addEventListener("mousemove", onMove, { passive: true });
+    }
     window.addEventListener("touchmove", onTouch, { passive: true });
 
     return () => {
       window.removeEventListener("resize", resize);
-      window.removeEventListener("mousemove", onMove);
+      if (desktopFinePointer) {
+        window.removeEventListener("mousemove", onMove);
+      }
       window.removeEventListener("touchmove", onTouch);
       cancelAnimationFrame(rafRef.current);
     };

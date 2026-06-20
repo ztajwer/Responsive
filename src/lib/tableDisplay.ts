@@ -12,7 +12,7 @@ export const TABLE_DISPLAY = {
     desktop: [0, 0.15, 0.27] as [number, number, number],
   },
   scale: {
-    mobile: 0.84,
+    mobile: 0.8,
     tablet: 0.54,
     desktop: 0.5,
   },

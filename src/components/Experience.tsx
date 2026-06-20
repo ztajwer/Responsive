@@ -73,8 +73,9 @@ function ExperienceInner() {
   }, [scrollModalOpen, onDoorScreen, scrollRef, closeScrollModal]);
 
   useEffect(() => {
+    if (!ready) return;
     preloadBoutiqueAudio();
-  }, []);
+  }, [ready]);
 
   useEffect(() => {
     if (entered) stopBoutiqueAudio();

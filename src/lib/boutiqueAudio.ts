@@ -12,7 +12,7 @@ function getAudio(): HTMLAudioElement | null {
   if (!audio) {
     audio = new Audio(CHIME_SRC);
     audio.loop = true;
-    audio.preload = "auto";
+    audio.preload = "metadata";
     audio.volume = 0;
   }
   return audio;

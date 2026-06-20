@@ -11,10 +11,9 @@ export default function DoorBackground({ fadeProgress = 0 }: DoorBackgroundProps
   const opacity = Math.max(0, 1 - fadeProgress * 1.08);
 
   useEffect(() => {
-    for (const src of ["/door_sm.png", "/door_bg.png"] as const) {
-      const img = new window.Image();
-      img.src = src;
-    }
+    const src = window.innerWidth >= 768 ? "/door_bg.png" : "/door_sm.png";
+    const img = new window.Image();
+    img.src = src;
   }, []);
 
   return (

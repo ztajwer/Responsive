@@ -31,20 +31,24 @@ export default function Loader({ onComplete }: LoaderProps) {
   useEffect(() => {
     const startedAt = Date.now();
     const progressWindow = LOADER_DURATION_MS - FADE_DURATION_MS;
+    let rafId = 0;
 
-    const interval = setInterval(() => {
+    const tick = () => {
       const elapsed = Date.now() - startedAt;
       const t = Math.min(1, elapsed / progressWindow);
       const eased = t * t * (3 - 2 * t);
       setDisplayProgress(eased * 100);
 
       if (elapsed >= LOADER_DURATION_MS) {
-        clearInterval(interval);
         finish();
+        return;
       }
-    }, 30);
 
-    return () => clearInterval(interval);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, [finish]);
 
   if (!visible) return null;
@@ -88,7 +92,7 @@ export default function Loader({ onComplete }: LoaderProps) {
                 />
                 <div className="loader-logo-inner overflow-hidden rounded-full bg-[#f8f8f8] shadow-[0_0_56px_rgba(212,175,55,0.38)]">
                   <Image
-                    src="/wh_logo.jpeg"
+                    src="/wh_logo.png"
                     alt="MAJ Boutique"
                     fill
                     priority
