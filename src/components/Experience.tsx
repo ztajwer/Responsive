@@ -119,7 +119,7 @@ function ExperienceInner() {
 
   return (
     <div className="relative h-full w-full bg-maj-cream">
-      <ModelPreloader doorsReady={ready} />
+      <ModelPreloader doorsReady={ready} shopEntered={entered} />
       <CursorGlitterTrail />
       <Loader onComplete={handleLoadComplete} />
 

@@ -285,7 +285,7 @@ const ProductModel = memo(function ProductModel({
 
     if (!groupRef.current) return;
     groupRef.current.position.set(position[0], position[1] + t * HOVER_LIFT, position[2]);
-    groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2]);
+    groupRef.current.rotation.set(rotation[0], rotation[1] + t * 0.06, rotation[2]);
     groupRef.current.scale.setScalar(1 + t * (HOVER_SCALE - 1));
 
     if (glowRef.current) {
@@ -358,7 +358,7 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
 
   useEffect(() => {
     if (visibleCount >= layout.length) return;
-    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), 320);
+    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), 550);
     return () => window.clearTimeout(id);
   }, [visibleCount, layout.length]);
 

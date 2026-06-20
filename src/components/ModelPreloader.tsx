@@ -5,10 +5,16 @@ import { useGLTF } from "@react-three/drei";
 import { extendGltfLoader, getProductModelUrls, getTableModelUrl } from "@/lib/modelAssets";
 
 const DOOR_IMAGES = ["/door_sm.png", "/door_bg.png"] as const;
-const PRODUCT_STAGGER_MS = 450;
+const PRODUCT_STAGGER_MS = 600;
 
-/** Preload table + door images early; stagger product GLBs to stay under ~1GB initial load. */
-export default function ModelPreloader({ doorsReady }: { doorsReady: boolean }) {
+/** Preload table + door images early; load product GLBs only after shop opens, one at a time. */
+export default function ModelPreloader({
+  doorsReady,
+  shopEntered,
+}: {
+  doorsReady: boolean;
+  shopEntered: boolean;
+}) {
   useEffect(() => {
     useGLTF.preload(getTableModelUrl(), false, false, extendGltfLoader);
 
@@ -19,7 +25,7 @@ export default function ModelPreloader({ doorsReady }: { doorsReady: boolean }) 
   }, []);
 
   useEffect(() => {
-    if (!doorsReady) return;
+    if (!doorsReady || !shopEntered) return;
 
     const urls = getProductModelUrls();
     let index = 0;
@@ -35,7 +41,7 @@ export default function ModelPreloader({ doorsReady }: { doorsReady: boolean }) 
     preloadNext();
 
     return () => window.clearTimeout(timer);
-  }, [doorsReady]);
+  }, [doorsReady, shopEntered]);
 
   return null;
 }
