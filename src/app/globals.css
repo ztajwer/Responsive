@@ -8,7 +8,7 @@
   --maj-white: #fffbf7;
   --maj-brown: #3d2b1f;
   --maj-cream: #faf6f1;
-  --table-band-height: min(34vh, 360px);
+  --table-band-height: min(38vh, 400px);
 }
 
 @media (min-width: 640px) {
@@ -147,9 +147,9 @@ body {
   }
 
   .shop-table-layer {
-    height: min(40vh, 380px);
-    min-height: 280px;
-    max-height: 400px;
+    height: min(46vh, 420px);
+    min-height: 300px;
+    max-height: 440px;
   }
 }
 
