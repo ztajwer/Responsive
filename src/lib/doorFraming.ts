@@ -50,8 +50,14 @@ export const DOOR_CAMERA = {
   liftMax: 0.04,
   liftMaxMobile: 0,
   padding: 1.028,
+  paddingLarge: 0.992,
   paddingLandscape: 1.06,
   lookAtY: -0.05,
+  /** Large desktop: taller door, bottom sits lower on screen. */
+  lookAtYLarge: 0.115,
+  desktopHeightScaleLarge: 1.145,
+  desktopFovLarge: 32,
+  desktopLargeBreakpoint: 1024,
   /** Slight Z pop — door sits in front of the wall plane. */
   mobileGroupZ: 0.1,
   mobileVerticalMargin: 0.04,
@@ -149,17 +155,27 @@ function computeMobileDoorFraming(
   };
 }
 
-function computeDesktopDoorFraming(aspect: number): DoorCameraFraming {
-  const fov = DOOR_CAMERA.fov;
-  const padding = aspect > 1.75 ? DOOR_CAMERA.paddingLandscape : DOOR_CAMERA.padding;
-  const uniform = aspect > 1.85 ? 0.97 : 1;
+function computeDesktopDoorFraming(
+  aspect: number,
+  viewportWidth: number,
+): DoorCameraFraming {
+  const isLarge = viewportWidth >= DOOR_CAMERA.desktopLargeBreakpoint;
+  const fov = isLarge ? DOOR_CAMERA.desktopFovLarge : DOOR_CAMERA.fov;
+  const padding = isLarge
+    ? DOOR_CAMERA.paddingLarge
+    : aspect > 1.75
+      ? DOOR_CAMERA.paddingLandscape
+      : DOOR_CAMERA.padding;
+  const uniform = aspect > 1.85 && !isLarge ? 0.97 : 1;
+  const heightScale = isLarge ? DOOR_CAMERA.desktopHeightScaleLarge : 1;
 
   const vFovRad = (fov * Math.PI) / 180;
   const halfV = vFovRad / 2;
   const halfH = Math.atan(Math.tan(halfV) * aspect);
 
   const halfWidth = DOOR_HALF_WIDTH * uniform;
-  const halfHeight = Math.max(DOOR_HALF_HEIGHT_TOP, DOOR_HALF_HEIGHT_BOTTOM) * uniform;
+  const halfHeight =
+    Math.max(DOOR_HALF_HEIGHT_TOP, DOOR_HALF_HEIGHT_BOTTOM) * uniform * heightScale;
 
   const distForHeight = halfHeight / Math.tan(halfV);
   const distForWidth = halfWidth / Math.tan(halfH);
@@ -169,9 +185,9 @@ function computeDesktopDoorFraming(aspect: number): DoorCameraFraming {
 
   return {
     distance,
-    lookAtY: DOOR_CAMERA.lookAtY,
+    lookAtY: isLarge ? DOOR_CAMERA.lookAtYLarge : DOOR_CAMERA.lookAtY,
     fov,
-    scale: { x: uniform, y: uniform },
+    scale: { x: uniform, y: uniform * heightScale },
     groupZ: 0.04,
     isMobile: false,
   };
@@ -185,7 +201,7 @@ export function computeDoorCameraFraming(
   if (viewportWidth < DOOR_MOBILE_BREAKPOINT) {
     return computeMobileDoorFraming(aspect, viewportWidth, viewportHeight);
   }
-  return computeDesktopDoorFraming(aspect);
+  return computeDesktopDoorFraming(aspect, viewportWidth);
 }
 
 export function framingToFrameState(framing: DoorCameraFraming): DoorFrameState {
