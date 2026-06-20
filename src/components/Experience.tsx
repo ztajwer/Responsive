@@ -11,6 +11,7 @@ import DoorChimeAudio from "./DoorChimeAudio";
 import CursorGlitterTrail from "./CursorGlitterTrail";
 import DoorSceneCanvas from "./DoorSceneCanvas";
 import ShopExperience from "./jewelry/ShopExperience";
+import ModelPreloader from "./ModelPreloader";
 import {
   preloadBoutiqueAudio,
   startBoutiqueAudioFromGesture,
@@ -118,6 +119,7 @@ function ExperienceInner() {
 
   return (
     <div className="relative h-full w-full bg-maj-cream">
+      <ModelPreloader />
       <CursorGlitterTrail />
       <Loader onComplete={handleLoadComplete} />
 
@@ -131,7 +133,7 @@ function ExperienceInner() {
 
       {onDoorScreen && <DoorBackground fadeProgress={doorProgress} />}
 
-      {ready && entered && <ShopExperience visible={entered} />}
+      {ready && <ShopExperience active={ready} visible={entered} />}
 
       {onDoorScreen && (
         <DoorSceneCanvas

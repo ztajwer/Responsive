@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import SeoJsonLd from "@/components/SeoJsonLd";
 import { siteConfig } from "@/lib/site";
-import { GLB_CDN_BASE } from "@/lib/glbConfig";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -92,7 +91,10 @@ export default function RootLayout({
     <html lang="en" className={`${cormorant.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://media.githubusercontent.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href={GLB_CDN_BASE} />
+        <link
+          rel="dns-prefetch"
+          href="https://media.githubusercontent.com/media/ztajwer/Responsive/main/public"
+        />
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <SeoJsonLd />

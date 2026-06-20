@@ -3,22 +3,22 @@ export const TABLE_POLAR_ANGLE = Math.PI / 2;
 
 export const TABLE_DISPLAY = {
   position: {
-    mobile: [0, 0, 0.34] as [number, number, number],
+    mobile: [0, -0.1, 0.34] as [number, number, number],
     tablet: [0, 0, 0.31] as [number, number, number],
     desktop: [0, 0, 0.3] as [number, number, number],
   },
   target: {
-    mobile: [0, 0.1, 0.34] as [number, number, number],
+    mobile: [0, 0.04, 0.34] as [number, number, number],
     tablet: [0, 0.12, 0.31] as [number, number, number],
     desktop: [0, 0.13, 0.3] as [number, number, number],
   },
   scale: {
-    mobile: 0.82,
+    mobile: 0.78,
     tablet: 0.54,
     desktop: 0.5,
   },
   camera: {
-    mobile: { position: [0, 0.1, 2.06] as [number, number, number], fov: 38 },
+    mobile: { position: [0, 0.04, 2.0] as [number, number, number], fov: 42 },
     tablet: { position: [0, 0.12, 3.08] as [number, number, number], fov: 32 },
     desktop: { position: [0, 0.13, 3.18] as [number, number, number], fov: 30 },
   },
@@ -28,8 +28,10 @@ export const TABLE_DISPLAY = {
     blur: { mobile: 4.8, tablet: 4.2, desktop: 3.6 },
     groundY: 0.002,
   },
-  /** Push framing toward bottom band (mobile canvas is pinned low). */
-  viewOffsetY: { mobile: 0.44, tablet: 0.24, desktop: 0.16 },
+  /** Camera crop — higher = table lower on screen. */
+  viewOffsetY: { mobile: 0.68, tablet: 0.24, desktop: 0.16 },
+  /** Extra downward shift in pixels (mobile). */
+  viewOffsetPx: { mobile: 110, tablet: 0, desktop: 0 },
 } as const;
 
 export type TableBreakpoint = "mobile" | "tablet" | "desktop";
@@ -85,4 +87,8 @@ export function getTableViewOffsetY(width: number, height = width) {
   }
 
   return base;
+}
+
+export function getTableViewOffsetPx(width: number): number {
+  return TABLE_DISPLAY.viewOffsetPx[getTableBreakpoint(width)];
 }

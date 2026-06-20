@@ -8,8 +8,8 @@ interface LoaderProps {
   onComplete: () => void;
 }
 
-const LOADER_DURATION_MS = 3500;
-const FADE_DURATION_MS = 450;
+const LOADER_DURATION_MS = 1100;
+const FADE_DURATION_MS = 250;
 
 export default function Loader({ onComplete }: LoaderProps) {
   const [visible, setVisible] = useState(true);
@@ -53,7 +53,7 @@ export default function Loader({ onComplete }: LoaderProps) {
 
   return (
     <div
-      className={`loader-screen fixed inset-0 z-50 transition-opacity duration-[450ms] ease-out ${
+      className={`loader-screen fixed inset-0 z-50 transition-opacity duration-[250ms] ease-out ${
         fadeOut ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >

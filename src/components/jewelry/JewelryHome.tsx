@@ -4,7 +4,6 @@ import { Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
   ContactShadows,
-  Environment,
   OrbitControls,
   PerspectiveCamera,
   useCursor,
@@ -19,6 +18,7 @@ import {
   getTableShadow,
   getTableTarget,
   getTableViewOffsetY,
+  getTableViewOffsetPx,
 } from "@/lib/tableDisplay";
 import {
   getProductArcLayout,
@@ -28,6 +28,7 @@ import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
 
 interface JewelryHomeProps {
   visible: boolean;
+  showLayer?: boolean;
 }
 
 const GOLD_MAIN = new THREE.Color("#E3BD9B");
@@ -348,7 +349,6 @@ const ProductModel = memo(function ProductModel({
 
 function TableProducts({ surfaceY }: { surfaceY: number }) {
   const { size } = useThree();
-  const [visibleCount, setVisibleCount] = useState(1);
   const displaySize = useMemo(
     () => getProductDisplaySize(size.width, size.height),
     [size.width, size.height],
@@ -356,23 +356,6 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
   const layout = useMemo(
     () => getProductArcLayout(surfaceY, size.width, size.height, displaySize),
     [surfaceY, size.width, size.height, displaySize],
-  );
-
-  useEffect(() => {
-    layout.slice(0, visibleCount).forEach((item) =>
-      useGLTF.preload(item.url, false, false, extendGltfLoader),
-    );
-  }, [layout, visibleCount]);
-
-  useEffect(() => {
-    if (visibleCount >= layout.length) return;
-    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), 320);
-    return () => window.clearTimeout(id);
-  }, [visibleCount, layout.length]);
-
-  const visibleLayout = useMemo(
-    () => layout.slice(0, visibleCount),
-    [layout, visibleCount],
   );
 
   return (
@@ -391,7 +374,7 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
         color="#FFFFFF"
         distance={5}
       />
-      {visibleLayout.map((item) => (
+      {layout.map((item) => (
         <Suspense key={item.url} fallback={null}>
           <ProductModel
             url={item.url}
@@ -419,7 +402,15 @@ function ResponsiveCamera() {
     camera.lookAt(...target);
 
     const offsetY = getTableViewOffsetY(size.width, size.height);
-    camera.setViewOffset(size.width, size.height, 0, size.height * offsetY, size.width, size.height);
+    const offsetPx = getTableViewOffsetPx(size.width);
+    camera.setViewOffset(
+      size.width,
+      size.height,
+      0,
+      size.height * offsetY + offsetPx,
+      size.width,
+      size.height,
+    );
     camera.updateProjectionMatrix();
   }, [camera, size.width, size.height, cam.fov, cam.position, target]);
 
@@ -531,10 +522,6 @@ function TableScene({
         far={2}
         color="#2A2018"
       />
-
-      <Suspense fallback={null}>
-        <Environment preset="studio" background={false} environmentIntensity={0.75} />
-      </Suspense>
     </>
   );
 }
@@ -547,7 +534,7 @@ function TableLoader() {
   );
 }
 
-export default function JewelryHome({ visible }: JewelryHomeProps) {
+export default function JewelryHome({ visible, showLayer = true }: JewelryHomeProps) {
   const [tableReady, setTableReady] = useState(false);
   const [mobile, setMobile] = useState(false);
   const handleReady = useCallback(() => setTableReady(true), []);
@@ -559,23 +546,18 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
     return () => window.removeEventListener("resize", sync);
   }, []);
 
-  useEffect(() => {
-    if (!visible) return;
-    useGLTF.preload(getTableModelUrl(), false, false, extendGltfLoader);
-  }, [visible]);
-
   return (
     <div
-      className="shop-table-layer absolute inset-0"
+      className="shop-table-layer"
       style={{
-        opacity: visible ? 1 : 0,
-        pointerEvents: visible && tableReady ? "auto" : "none",
-        transition: "opacity 1s cubic-bezier(0.22, 1, 0.36, 1) 0.1s",
-        cursor: visible && tableReady ? "grab" : "default",
+        opacity: showLayer ? 1 : 0,
+        pointerEvents: showLayer ? "auto" : "none",
+        transition: "opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1)",
+        cursor: showLayer ? "grab" : "default",
       }}
       onWheel={(e) => e.preventDefault()}
     >
-      {visible && !tableReady && <TableLoader />}
+      {visible && !tableReady && showLayer && <TableLoader />}
 
       <Canvas
         shadows={!mobile}

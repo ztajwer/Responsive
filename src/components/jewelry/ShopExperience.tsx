@@ -4,6 +4,9 @@ import { Component, type ReactNode } from "react";
 import JewelryHome from "./JewelryHome";
 
 interface ShopExperienceProps {
+  /** Mount and preload 3D while doors are on screen. */
+  active: boolean;
+  /** Reveal shop after doors open. */
   visible: boolean;
 }
 
@@ -42,17 +45,24 @@ class ShopErrorBoundary extends Component<{ children: ReactNode }, { failed: boo
   }
 }
 
-export default function ShopExperience({ visible }: ShopExperienceProps) {
-  if (!visible) return null;
+export default function ShopExperience({ active, visible }: ShopExperienceProps) {
+  if (!active) return null;
 
   return (
     <ShopErrorBoundary>
-      <div className="shop-experience fixed inset-0 z-[40] overflow-hidden">
+      <div
+        className="shop-experience fixed inset-0 overflow-hidden"
+        style={{
+          zIndex: visible ? 40 : 0,
+          opacity: visible ? 1 : 0,
+          pointerEvents: visible ? "auto" : "none",
+        }}
+      >
         <div className="shop-experience-bg" aria-hidden>
           <div className="shop-experience-bg__zoom" />
         </div>
 
-        <JewelryHome visible={visible} />
+        <JewelryHome visible={active} showLayer={visible} />
       </div>
     </ShopErrorBoundary>
   );

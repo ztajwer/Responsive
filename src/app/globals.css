@@ -100,7 +100,7 @@ body {
   width: 100%;
   height: 100dvh;
   min-height: 100dvh;
-  animation: fadeIn 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: fadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .shop-experience-bg {
@@ -123,6 +123,8 @@ body {
 }
 
 .shop-table-layer {
+  position: absolute;
+  inset: 0;
   z-index: 10;
   touch-action: none;
 }
@@ -140,9 +142,9 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 60vh;
-    min-height: 340px;
-    max-height: 520px;
+    height: 52vh;
+    min-height: 300px;
+    max-height: 420px;
   }
 }
 
