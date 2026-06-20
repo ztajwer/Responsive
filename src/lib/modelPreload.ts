@@ -1,13 +1,10 @@
 "use client";
 
-import { useGLTF } from "@react-three/drei";
-import { extendGltfLoader, getProductModelUrls, getTableModelUrl } from "./modelAssets";
+import { getProductModelUrls, getTableModelUrl } from "./modelAssets";
 
 const bytePrefetched = new Set<string>();
-const gltfStarted = new Set<string>();
-let productStaggerScheduled = false;
 let pipelineStarted = false;
-let shopLoadsStarted = false;
+let shopBytesStarted = false;
 
 const SHOP_IMAGES = ["/background.png", "/main_mob_bg.png"] as const;
 const DOOR_IMAGES = ["/door_sm.png", "/door_bg.png"] as const;
@@ -19,60 +16,29 @@ function prefetchModelBytes(url: string) {
   void fetch(url, { mode: "cors", cache: "force-cache" }).catch(() => {});
 }
 
-function preloadGltf(url: string) {
-  if (gltfStarted.has(url)) return;
-  gltfStarted.add(url);
-  useGLTF.preload(url, false, false, extendGltfLoader);
-}
-
 function preloadImage(src: string) {
   if (typeof window === "undefined") return;
   const img = new window.Image();
   img.src = src;
 }
 
-/** Network-only — table first; products when shop opens. */
+/** Network-only — never parse GLTF here (keeps GPU memory free until shop Canvas mounts). */
 export function prefetchTableBytes() {
   prefetchModelBytes(getTableModelUrl());
 }
 
-export function prefetchAllModelBytes() {
-  prefetchTableBytes();
-  getProductModelUrls().forEach(prefetchModelBytes);
-}
-
-export function preloadTableModel() {
-  const url = getTableModelUrl();
-  prefetchModelBytes(url);
-  preloadGltf(url);
-}
-
-export function preloadNextProductModel(index: number) {
+export function prefetchProductBytes(index: number) {
   const urls = getProductModelUrls();
   const url = urls[Math.min(Math.max(index, 0), urls.length - 1)];
-  if (!url) return;
-  prefetchModelBytes(url);
-  preloadGltf(url);
+  if (url) prefetchModelBytes(url);
 }
 
-export function staggerRemainingProductPreloads(fromIndex = 1, gapMs = 400) {
-  if (productStaggerScheduled) return;
-  productStaggerScheduled = true;
-
-  const urls = getProductModelUrls();
-  for (let i = fromIndex; i < urls.length; i++) {
-    const index = i;
-    window.setTimeout(() => preloadNextProductModel(index), gapMs * (index - fromIndex));
-  }
-}
-
-/** Loader boot: images + table bytes + table GLTF only (one parse — safe for GPU). */
+/** Loader boot: images + table bytes only. */
 export function bootFastPipeline() {
   if (pipelineStarted) return;
   pipelineStarted = true;
 
   prefetchTableBytes();
-  preloadTableModel();
 
   for (const src of [...LOADER_IMAGES, ...DOOR_IMAGES, ...SHOP_IMAGES]) {
     preloadImage(src);
@@ -81,15 +47,17 @@ export function bootFastPipeline() {
   warmShopExperienceModule();
 }
 
-/** Shop view: prefetch product bytes, parse first product, stagger the rest. */
+/** Shop opens: warm table + first product bytes only — GLTF parses inside Canvas, one at a time. */
 export function startShopModelLoads() {
-  if (shopLoadsStarted) return;
-  shopLoadsStarted = true;
+  if (shopBytesStarted) return;
+  shopBytesStarted = true;
+  prefetchTableBytes();
+  prefetchProductBytes(0);
+}
 
-  preloadTableModel();
-  getProductModelUrls().forEach(prefetchModelBytes);
-  preloadNextProductModel(0);
-  staggerRemainingProductPreloads(1, 400);
+/** Prefetch bytes for the next product before it mounts (no GLTF parse). */
+export function prefetchNextProductBytes(index: number) {
+  prefetchProductBytes(index);
 }
 
 /** @deprecated Use bootFastPipeline */
@@ -121,8 +89,4 @@ export function scheduleIdle(task: () => void) {
 export function warmShopExperienceModule() {
   void import("@/components/jewelry/ShopExperience");
   void import("@/components/jewelry/JewelryHome");
-}
-
-export function isModelPreloadStarted(url: string) {
-  return gltfStarted.has(url);
 }

@@ -27,6 +27,7 @@ const ShopExperience = dynamic(() => import("./jewelry/ShopExperience"), {
 
 function ExperienceInner() {
   const [ready, setReady] = useState(false);
+  const [shopCanvasReady, setShopCanvasReady] = useState(false);
   const [scrollModalOpen, setScrollModalOpen] = useState(false);
   const {
     scrollRef,
@@ -90,6 +91,15 @@ function ExperienceInner() {
   }, [entered]);
 
   useEffect(() => {
+    if (!entered) {
+      setShopCanvasReady(false);
+      return;
+    }
+    const id = window.setTimeout(() => setShopCanvasReady(true), 800);
+    return () => window.clearTimeout(id);
+  }, [entered]);
+
+  useEffect(() => {
     if (!onDoorScreen) return;
     const el = scrollRef.current;
     if (!el) return;
@@ -140,7 +150,7 @@ function ExperienceInner() {
 
       {onDoorScreen && <DoorBackground fadeProgress={doorProgress} />}
 
-      {ready && entered && <ShopExperience visible={entered} />}
+      {ready && entered && shopCanvasReady && <ShopExperience visible={entered} />}
 
       {onDoorScreen && (
         <DoorSceneCanvas
