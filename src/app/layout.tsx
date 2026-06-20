@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import SeoJsonLd from "@/components/SeoJsonLd";
 import { siteConfig } from "@/lib/site";
-import { GLB_CDN_BASE } from "@/lib/glbConfig";
+import { GLB_CDN_BASE, SHOP_GLB_FILES } from "@/lib/glbConfig";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -102,6 +102,15 @@ export default function RootLayout({
           as="fetch"
           crossOrigin="anonymous"
         />
+        {SHOP_GLB_FILES.slice(1).map((file) => (
+          <link
+            key={file}
+            rel="preload"
+            href={`${GLB_CDN_BASE}/${file}`}
+            as="fetch"
+            crossOrigin="anonymous"
+          />
+        ))}
         <link rel="preload" href="/bg.png" as="image" />
         <link rel="preload" href="/logo_outline.png" as="image" />
         <link rel="preload" href="/wh_logo-removebg-preview.png" as="image" />

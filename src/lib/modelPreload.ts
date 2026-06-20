@@ -3,39 +3,56 @@
 import { useGLTF } from "@react-three/drei";
 import { extendGltfLoader, getProductModelUrls, getTableModelUrl } from "./modelAssets";
 
-const started = new Set<string>();
+const bytePrefetched = new Set<string>();
+const gltfStarted = new Set<string>();
 
 const SHOP_IMAGES = ["/background.png", "/main_mob_bg.png"] as const;
 const DOOR_IMAGES = ["/door_sm.png", "/door_bg.png"] as const;
 
+function prefetchModelBytes(url: string) {
+  if (bytePrefetched.has(url) || typeof window === "undefined") return;
+  bytePrefetched.add(url);
+  void fetch(url, { mode: "cors", cache: "force-cache" }).catch(() => {});
+}
+
 function preloadGltf(url: string) {
-  if (started.has(url)) return;
-  started.add(url);
+  if (gltfStarted.has(url)) return;
+  gltfStarted.add(url);
   useGLTF.preload(url, false, false, extendGltfLoader);
 }
 
-export function preloadTableModel() {
-  preloadGltf(getTableModelUrl());
+/** Start all shop GLB downloads + parses as early as possible. */
+export function bootShopModels() {
+  const table = getTableModelUrl();
+  const products = getProductModelUrls();
+
+  prefetchModelBytes(table);
+  products.forEach(prefetchModelBytes);
+
+  preloadGltf(table);
+  products.forEach(preloadGltf);
 }
 
-/** Preload one product at a time to avoid loading ~400MB of GLBs at once. */
-export function preloadProductModels(): Promise<void> {
-  const urls = getProductModelUrls().filter((url) => !started.has(url));
-  if (urls.length === 0) return Promise.resolve();
+export function preloadTableModel() {
+  const url = getTableModelUrl();
+  prefetchModelBytes(url);
+  preloadGltf(url);
+}
 
-  let chain = Promise.resolve();
-  for (const url of urls) {
-    chain = chain.then(() => {
-      preloadGltf(url);
-    });
-  }
-  return chain;
+export function preloadProductModels(): Promise<void> {
+  getProductModelUrls().forEach((url) => {
+    prefetchModelBytes(url);
+    preloadGltf(url);
+  });
+  return Promise.resolve();
 }
 
 export function preloadNextProductModel(index: number) {
   const urls = getProductModelUrls();
   const url = urls[Math.min(Math.max(index, 0), urls.length - 1)];
-  if (url) preloadGltf(url);
+  if (!url) return;
+  prefetchModelBytes(url);
+  preloadGltf(url);
 }
 
 export function preloadDoorImages() {
@@ -54,12 +71,17 @@ export function preloadShopImages() {
 
 export function scheduleIdle(task: () => void) {
   if (typeof window.requestIdleCallback === "function") {
-    window.requestIdleCallback(() => task(), { timeout: 2200 });
+    window.requestIdleCallback(() => task(), { timeout: 800 });
     return;
   }
-  window.setTimeout(task, 600);
+  window.setTimeout(task, 200);
 }
 
 export function warmShopExperienceModule() {
   void import("@/components/jewelry/ShopExperience");
+  void import("@/components/jewelry/JewelryHome");
+}
+
+export function isModelPreloadStarted(url: string) {
+  return gltfStarted.has(url);
 }

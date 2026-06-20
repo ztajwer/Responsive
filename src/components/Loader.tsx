@@ -3,14 +3,19 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import LoaderFallingGlitter from "./LoaderFallingGlitter";
-import { preloadDoorImages, preloadNextProductModel, preloadShopImages, preloadTableModel, warmShopExperienceModule } from "@/lib/modelPreload";
+import {
+  bootShopModels,
+  preloadDoorImages,
+  preloadShopImages,
+  warmShopExperienceModule,
+} from "@/lib/modelPreload";
 
 interface LoaderProps {
   onComplete: () => void;
 }
 
-const LOADER_DURATION_MS = 2800;
-const FADE_DURATION_MS = 400;
+const LOADER_DURATION_MS = 2000;
+const FADE_DURATION_MS = 350;
 
 export default function Loader({ onComplete }: LoaderProps) {
   const [visible, setVisible] = useState(true);
@@ -19,10 +24,9 @@ export default function Loader({ onComplete }: LoaderProps) {
   const finishedRef = useRef(false);
 
   useEffect(() => {
-    preloadTableModel();
+    bootShopModels();
     preloadDoorImages();
     preloadShopImages();
-    preloadNextProductModel(0);
     warmShopExperienceModule();
   }, []);
 
@@ -62,7 +66,7 @@ export default function Loader({ onComplete }: LoaderProps) {
 
   return (
     <div
-      className={`loader-screen fixed inset-0 z-50 transition-opacity duration-[400ms] ease-out ${
+      className={`loader-screen fixed inset-0 z-50 transition-opacity duration-[350ms] ease-out ${
         fadeOut ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
@@ -91,7 +95,7 @@ export default function Loader({ onComplete }: LoaderProps) {
                   alt=""
                   fill
                   priority
-                  sizes="(max-width: 640px) 80vw, (max-width: 768px) 52vw, 360px"
+                  sizes="(max-width: 640px) 80vw, (max-width: 768px) 48vw, 360px"
                   className="loader-logo-outline object-contain object-center"
                   aria-hidden
                 />

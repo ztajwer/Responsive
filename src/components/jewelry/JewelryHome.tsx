@@ -36,7 +36,7 @@ const TABLE_LEG_COLOR = colors.tableLeg;
 const TABLE_HEIGHT_FRACTION = 0.218;
 const TABLE_MAX_WIDTH_FRACTION = 0.68;
 const TABLE_CENTER_NDC_TARGET = -0.18;
-const PRODUCT_STAGGER_MS = 220;
+const PRODUCT_STAGGER_MS = 0;
 const HOVER_LIFT = 0.044;
 const HOVER_SCALE = 1.12;
 
@@ -469,11 +469,19 @@ function TableProducts({
     () => getProductRowLayout(surfaceY, size.width, size.height, displaySize, tableTopWidth),
     [surfaceY, size.width, size.height, displaySize, tableTopWidth],
   );
-  const [visibleCount, setVisibleCount] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(() => layout.length);
+
+  useEffect(() => {
+    setVisibleCount(layout.length);
+  }, [layout.length]);
 
   useEffect(() => {
     if (visibleCount >= layout.length) return;
     preloadNextProductModel(visibleCount);
+    if (PRODUCT_STAGGER_MS <= 0) {
+      setVisibleCount(layout.length);
+      return;
+    }
     const id = window.setTimeout(() => setVisibleCount((count) => count + 1), PRODUCT_STAGGER_MS);
     return () => window.clearTimeout(id);
   }, [visibleCount, layout.length]);
