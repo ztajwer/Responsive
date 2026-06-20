@@ -106,11 +106,11 @@ function applyTableMaterials(root: THREE.Object3D) {
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#FFF6E8").multiplyScalar(isLeg ? 0.012 : 0.018);
+        mat.emissive.set("#FFF6E8").multiplyScalar(isLeg ? 0.016 : 0.024);
       }
       if ("metalness" in mat) mat.metalness = isLeg ? 0.02 : 0.015;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.76 : 0.72;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.06;
+      if ("roughness" in mat) mat.roughness = isLeg ? 0.74 : 0.7;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.08;
     });
   });
 }
@@ -237,7 +237,7 @@ function setupProductShadows(root: THREE.Object3D) {
       if ("roughness" in mat && typeof mat.roughness === "number") {
         mat.roughness = THREE.MathUtils.clamp(mat.roughness, 0.38, 0.72);
       }
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.2;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.24;
     });
   });
 }
@@ -493,7 +493,7 @@ function TableProducts({
     <group>
       <pointLight
         position={[0, surfaceY + 0.14, 0.48]}
-        intensity={0.32}
+        intensity={0.38}
         color="#FFF6EC"
         distance={4.2}
       />
@@ -626,13 +626,13 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.48 : 0.44} color="#FFF6EE" />
-      <hemisphereLight args={["#FFFAF4", "#7A5E3E", mobile ? 0.28 : 0.26]} />
+      <ambientLight intensity={mobile ? 0.52 : 0.48} color="#FFF8F0" />
+      <hemisphereLight args={["#FFFCF6", "#7A5E3E", mobile ? 0.31 : 0.29]} />
 
       <directionalLight
         position={[0.2, 4.8, 2.8]}
-        intensity={mobile ? 0.72 : 0.76}
-        color="#FFF4EA"
+        intensity={mobile ? 0.78 : 0.82}
+        color="#FFF6EE"
         castShadow={!mobile}
         shadow-mapSize={[512, 512]}
         shadow-camera-far={10}
@@ -710,7 +710,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
           gl.shadowMap.enabled = !mobile;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = mobile ? 0.96 : 0.94;
+          gl.toneMappingExposure = mobile ? 0.99 : 0.97;
           gl.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >
