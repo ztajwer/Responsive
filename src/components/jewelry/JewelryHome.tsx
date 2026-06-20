@@ -26,6 +26,13 @@ import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
 import { colors } from "@/lib/colors";
 import { optimizeModelForGpu } from "@/lib/gpuModelOptimize";
 import { prefetchNextProductBytes } from "@/lib/modelPreload";
+import {
+  getDeviceProfile,
+  getMaxShopProducts,
+  getProductStaggerMs,
+  getProductStartDelayMs,
+  type DeviceProfile,
+} from "@/lib/deviceProfile";
 
 interface JewelryHomeProps {
   visible: boolean;
@@ -39,8 +46,6 @@ const TABLE_LEG_COLOR = colors.tableLeg;
 /** Medium table — center, slightly below middle */
 const TABLE_HEIGHT_FRACTION = 0.26;
 const TABLE_CENTER_NDC_TARGET = -0.28;
-const PRODUCT_STAGGER_MS = 900;
-const PRODUCT_START_DELAY_MS = 700;
 const HOVER_LIFT = 0.044;
 const HOVER_SCALE = 1.12;
 
@@ -375,11 +380,15 @@ const ProductModel = memo(function ProductModel({
   position,
   rotation,
   displaySize,
+  showGlitter = true,
+  textureMax = 1024,
 }: {
   url: string;
   position: [number, number, number];
   rotation: [number, number, number];
   displaySize: number;
+  showGlitter?: boolean;
+  textureMax?: number;
 }) {
   const { gl } = useThree();
   const groupRef = useRef<THREE.Group>(null);
@@ -395,7 +404,7 @@ const ProductModel = memo(function ProductModel({
   useLayoutEffect(() => {
     fitProductToUniformSize(productRoot, displaySize);
     setupProductMaterials(productRoot);
-    optimizeModelForGpu(productRoot);
+    optimizeModelForGpu(productRoot, textureMax);
 
     const box = new THREE.Box3().setFromObject(productRoot);
     const size = box.getSize(new THREE.Vector3());
@@ -403,7 +412,7 @@ const ProductModel = memo(function ProductModel({
       radius: Math.max(size.x, size.z) * 0.52,
       height: size.y,
     });
-  }, [productRoot, displaySize]);
+  }, [productRoot, displaySize, textureMax]);
 
   useFrame((_, delta) => {
     const target = hovered ? 1 : 0;
@@ -455,7 +464,9 @@ const ProductModel = memo(function ProductModel({
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      <ProductGlitter active={hovered} radius={bounds.radius} height={bounds.height} />
+      {showGlitter && (
+        <ProductGlitter active={hovered} radius={bounds.radius} height={bounds.height} />
+      )}
     </group>
   );
 });
@@ -463,27 +474,33 @@ const ProductModel = memo(function ProductModel({
 function TableProducts({
   surfaceY,
   tableTopWidth,
+  profile,
 }: {
   surfaceY: number;
   tableTopWidth: number;
+  profile: DeviceProfile;
 }) {
   const { size } = useThree();
+  const maxProducts = getMaxShopProducts(profile);
+  const textureMax = profile.lowEnd ? 512 : profile.mobile ? 768 : 1024;
+  const showGlitter = !profile.lowEnd;
   const displaySize = useMemo(
     () => getProductDisplaySize(size.width, size.height, tableTopWidth),
     [size.width, size.height, tableTopWidth],
   );
   const layout = useMemo(
-    () => getProductRowLayout(surfaceY, size.width, size.height, displaySize, tableTopWidth),
-    [surfaceY, size.width, size.height, displaySize, tableTopWidth],
+    () => getProductRowLayout(surfaceY, size.width, size.height, displaySize, tableTopWidth).slice(0, maxProducts),
+    [surfaceY, size.width, size.height, displaySize, tableTopWidth, maxProducts],
   );
   const [visibleCount, setVisibleCount] = useState(1);
+  const staggerMs = getProductStaggerMs(profile);
 
   useEffect(() => {
     if (visibleCount >= layout.length) return;
     prefetchNextProductBytes(visibleCount);
-    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), PRODUCT_STAGGER_MS);
+    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), staggerMs);
     return () => window.clearTimeout(id);
-  }, [visibleCount, layout.length]);
+  }, [visibleCount, layout.length, staggerMs]);
 
   const visibleLayout = useMemo(
     () => layout.slice(0, visibleCount),
@@ -499,6 +516,8 @@ function TableProducts({
             position={item.position}
             rotation={item.rotation}
             displaySize={item.displaySize}
+            showGlitter={showGlitter}
+            textureMax={textureMax}
           />
         </Suspense>
       ))}
@@ -546,10 +565,12 @@ function TableModel({
   onReady,
   onSurfaceY,
   onTableMetrics,
+  profile,
 }: {
   onReady: () => void;
   onSurfaceY: (y: number) => void;
   onTableMetrics: (metrics: { topWidth: number }) => void;
+  profile: DeviceProfile;
 }) {
   const tableUrl = useMemo(() => getTableModelUrl(), []);
   const { scene: tableRoot } = useGLTF(tableUrl, false, false, extendGltfLoader);
@@ -562,6 +583,9 @@ function TableModel({
   useLayoutEffect(() => {
     fitTableToSize(tableRoot, targetScale);
     applyTableMaterials(tableRoot);
+    if (profile.lowEnd) {
+      optimizeModelForGpu(tableRoot, 512);
+    }
 
     if (camera instanceof THREE.PerspectiveCamera) {
       const centerY = getTableCenterY(tableRoot, tablePos);
@@ -585,7 +609,7 @@ function TableModel({
       readyRef.current = true;
       onReady();
     }
-  }, [tableRoot, targetScale, tablePos, size.width, size.height, camera, onReady, onSurfaceY, onTableMetrics]);
+  }, [tableRoot, targetScale, tablePos, size.width, size.height, camera, onReady, onSurfaceY, onTableMetrics, profile.lowEnd]);
 
   return (
     <group ref={groupRef} position={tablePos}>
@@ -597,9 +621,11 @@ function TableModel({
 function TableScene({
   onReady,
   showProducts,
+  profile,
 }: {
   onReady: () => void;
   showProducts: boolean;
+  profile: DeviceProfile;
 }) {
   const [surfaceY, setSurfaceY] = useState<number | null>(null);
   const [tableTopWidth, setTableTopWidth] = useState<number | null>(null);
@@ -619,9 +645,9 @@ function TableScene({
       setProductsReady(false);
       return;
     }
-    const id = window.setTimeout(() => setProductsReady(true), PRODUCT_START_DELAY_MS);
+    const id = window.setTimeout(() => setProductsReady(true), getProductStartDelayMs(profile));
     return () => window.clearTimeout(id);
-  }, [showProducts]);
+  }, [showProducts, profile]);
 
   return (
     <>
@@ -657,7 +683,12 @@ function TableScene({
       />
 
       <Suspense fallback={null}>
-        <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} onTableMetrics={handleTableMetrics} />
+        <TableModel
+          onReady={onReady}
+          onSurfaceY={handleSurfaceY}
+          onTableMetrics={handleTableMetrics}
+          profile={profile}
+        />
       </Suspense>
 
       {surfaceY !== null && (
@@ -670,19 +701,21 @@ function TableScene({
       )}
 
       {surfaceY !== null && tableTopWidth !== null && productsReady && (
-        <TableProducts surfaceY={surfaceY} tableTopWidth={tableTopWidth} />
+        <TableProducts surfaceY={surfaceY} tableTopWidth={tableTopWidth} profile={profile} />
       )}
 
-      <ContactShadows
-        position={[0, shadow.groundY, 0.52]}
-        opacity={shadow.opacity}
-        scale={shadow.scale}
-        blur={shadow.blur}
-        far={2}
-        color="#2A2018"
-        frames={1}
-        resolution={256}
-      />
+      {!profile.lowEnd && (
+        <ContactShadows
+          position={[0, shadow.groundY, 0.52]}
+          opacity={shadow.opacity}
+          scale={shadow.scale}
+          blur={shadow.blur}
+          far={2}
+          color="#2A2018"
+          frames={1}
+          resolution={256}
+        />
+      )}
     </>
   );
 }
@@ -697,22 +730,32 @@ function TableLoader() {
 
 export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps) {
   const [tableReady, setTableReady] = useState(false);
-  const [mobile, setMobile] = useState(false);
+  const [profile, setProfile] = useState<DeviceProfile>(() => getDeviceProfile());
   const [gpuLost, setGpuLost] = useState(false);
+  const layerRef = useRef<HTMLDivElement>(null);
   const handleReady = useCallback(() => {
     setTableReady(true);
     onTableReady?.();
   }, [onTableReady]);
 
   useEffect(() => {
-    const sync = () => setMobile(window.innerWidth < 768);
+    const sync = () => setProfile(getDeviceProfile());
     sync();
     window.addEventListener("resize", sync);
     return () => window.removeEventListener("resize", sync);
   }, []);
 
+  useEffect(() => {
+    const el = layerRef.current;
+    if (!el || !visible) return;
+    const blockWheel = (event: WheelEvent) => event.preventDefault();
+    el.addEventListener("wheel", blockWheel, { passive: false });
+    return () => el.removeEventListener("wheel", blockWheel);
+  }, [visible]);
+
   return (
     <div
+      ref={layerRef}
       className="shop-table-layer"
       style={{
         opacity: visible ? 1 : 0,
@@ -720,7 +763,6 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
         transition: "opacity 1s cubic-bezier(0.22, 1, 0.36, 1) 0.1s",
         cursor: visible && tableReady ? "grab" : "default",
       }}
-      onWheel={(e) => e.preventDefault()}
     >
       {visible && !tableReady && !gpuLost && <TableLoader />}
 
@@ -738,20 +780,21 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
 
       <Canvas
         shadows={false}
-        dpr={mobile ? 1 : [1, 1.05]}
+        dpr={1}
         className="h-full w-full"
         gl={{
-          antialias: !mobile,
+          antialias: !profile.lowEnd,
           alpha: true,
           powerPreference: "default",
           stencil: false,
           depth: true,
+          preserveDrawingBuffer: false,
         }}
         onCreated={({ gl }) => {
           gl.setClearColor(0x000000, 0);
           gl.shadowMap.enabled = false;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = mobile ? 1.06 : 1.04;
+          gl.toneMappingExposure = profile.mobile ? 1.06 : 1.04;
           gl.domElement.addEventListener(
             "webglcontextlost",
             (e) => {
@@ -763,7 +806,7 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
         }}
       >
         <Suspense fallback={null}>
-          <TableScene onReady={handleReady} showProducts={tableReady} />
+          <TableScene onReady={handleReady} showProducts={tableReady} profile={profile} />
         </Suspense>
       </Canvas>
     </div>

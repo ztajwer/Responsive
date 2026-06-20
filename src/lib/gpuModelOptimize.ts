@@ -1,7 +1,5 @@
 import * as THREE from "three";
 
-const GPU_TEXTURE_MAX = 1024;
-
 const TEXTURE_KEYS = [
   "map",
   "normalMap",
@@ -38,7 +36,7 @@ function downscaleTextureIfNeeded(texture: THREE.Texture, maxSize: number) {
 }
 
 /** Reduce GPU memory for large GLB textures and disable shadow flags. */
-export function optimizeModelForGpu(root: THREE.Object3D) {
+export function optimizeModelForGpu(root: THREE.Object3D, maxTextureSize = 1024) {
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh) return;
@@ -57,7 +55,7 @@ export function optimizeModelForGpu(root: THREE.Object3D) {
 
       for (const key of TEXTURE_KEYS) {
         const tex = mat[key];
-        if (tex) downscaleTextureIfNeeded(tex, GPU_TEXTURE_MAX);
+        if (tex) downscaleTextureIfNeeded(tex, maxTextureSize);
       }
     });
   });
