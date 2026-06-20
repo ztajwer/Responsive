@@ -1,12 +1,7 @@
 import { getTableCamera, getTableTarget } from "./tableDisplay";
+import { PRODUCT_MODEL_URLS } from "./modelAssets";
 
-export const PRODUCT_MODELS = [
-  "/pro1.glb",
-  "/pro2.glb",
-  "/pro3.glb",
-  "/pro4.glb",
-  "/pro5.glb",
-] as const;
+export const PRODUCT_MODELS = PRODUCT_MODEL_URLS;
 
 function worldSizeFromPixels(
   pixels: number,

@@ -25,6 +25,7 @@ import {
   getProductDisplaySize,
   PRODUCT_MODELS,
 } from "@/lib/productDisplay";
+import { TABLE_MODEL_URL } from "@/lib/modelAssets";
 
 interface JewelryHomeProps {
   visible: boolean;
@@ -433,7 +434,7 @@ function TableModel({
   onReady: () => void;
   onSurfaceY: (y: number) => void;
 }) {
-  const { scene } = useGLTF("/table-3d.glb");
+  const { scene } = useGLTF(TABLE_MODEL_URL);
   const groupRef = useRef<THREE.Group>(null);
   const { size } = useThree();
   const targetScale = getTableScale(size.width, size.height);
@@ -557,7 +558,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
 
   useEffect(() => {
     if (!visible) return;
-    useGLTF.preload("/table-3d.glb");
+    useGLTF.preload(TABLE_MODEL_URL);
   }, [visible]);
 
   return (
