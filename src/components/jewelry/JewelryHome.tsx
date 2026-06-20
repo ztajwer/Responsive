@@ -181,7 +181,7 @@ function TableScene({ onReady }: { onReady: () => void }) {
       <TableModel onReady={onReady} />
 
       <ContactShadows
-        position={[0, shadow.groundY, 0.18]}
+        position={[0, shadow.groundY, 0.24]}
         opacity={shadow.opacity}
         scale={shadow.scale}
         blur={shadow.blur}

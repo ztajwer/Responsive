@@ -2,19 +2,19 @@ export const TABLE_POLAR_ANGLE = 1.555;
 
 export const TABLE_DISPLAY = {
   position: {
-    mobile: [0, 0, 0.2] as [number, number, number],
-    tablet: [0, 0, 0.18] as [number, number, number],
-    desktop: [0, 0, 0.17] as [number, number, number],
+    mobile: [0, 0, 0.26] as [number, number, number],
+    tablet: [0, 0, 0.23] as [number, number, number],
+    desktop: [0, 0, 0.22] as [number, number, number],
   },
   target: {
-    mobile: [0, 0.12, 0.16] as [number, number, number],
-    tablet: [0, 0.14, 0.15] as [number, number, number],
-    desktop: [0, 0.15, 0.14] as [number, number, number],
+    mobile: [0, 0.12, 0.22] as [number, number, number],
+    tablet: [0, 0.14, 0.2] as [number, number, number],
+    desktop: [0, 0.15, 0.19] as [number, number, number],
   },
   scale: {
-    mobile: 0.88,
-    tablet: 0.57,
-    desktop: 0.53,
+    mobile: 0.84,
+    tablet: 0.54,
+    desktop: 0.5,
   },
   camera: {
     mobile: { position: [0, 0.13, 2.02] as [number, number, number], fov: 40 },
