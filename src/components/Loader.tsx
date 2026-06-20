@@ -6,12 +6,14 @@ import LoaderFallingGlitter from "./LoaderFallingGlitter";
 import {
   bootFastPipeline,
 } from "@/lib/modelPreload";
+import { getDeviceProfile } from "@/lib/deviceProfile";
 
 interface LoaderProps {
   onComplete: () => void;
 }
 
-const LOADER_DURATION_MS = 1800;
+const LOADER_DURATION_MS_DEFAULT = 1800;
+const LOADER_DURATION_MS_LOW = 1400;
 const FADE_DURATION_MS = 300;
 
 export default function Loader({ onComplete }: LoaderProps) {
@@ -19,6 +21,11 @@ export default function Loader({ onComplete }: LoaderProps) {
   const [fadeOut, setFadeOut] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
   const finishedRef = useRef(false);
+  const loaderDurationMs = useRef(
+    typeof window !== "undefined" && getDeviceProfile().lowEnd
+      ? LOADER_DURATION_MS_LOW
+      : LOADER_DURATION_MS_DEFAULT,
+  );
 
   useEffect(() => {
     bootFastPipeline();
@@ -37,7 +44,7 @@ export default function Loader({ onComplete }: LoaderProps) {
 
   useEffect(() => {
     const startedAt = Date.now();
-    const progressWindow = LOADER_DURATION_MS - FADE_DURATION_MS;
+    const progressWindow = loaderDurationMs.current - FADE_DURATION_MS;
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startedAt;
@@ -45,7 +52,7 @@ export default function Loader({ onComplete }: LoaderProps) {
       const eased = t * t * (3 - 2 * t);
       setDisplayProgress(eased * 100);
 
-      if (elapsed >= LOADER_DURATION_MS) {
+      if (elapsed >= loaderDurationMs.current) {
         clearInterval(interval);
         finish();
       }
