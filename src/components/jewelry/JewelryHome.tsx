@@ -31,9 +31,11 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Table base sits 20% above the bottom edge of the canvas band */
-const TABLE_BOTTOM_FROM_EDGE = 0.2;
-const TABLE_BOTTOM_NDC_TARGET = -1 + 2 * TABLE_BOTTOM_FROM_EDGE;
+/** Vertical band: top 85% clear, table ~10%, bottom 5% margin */
+const TABLE_TOP_CLEAR = 0.85;
+const TABLE_HEIGHT_FRACTION = 0.1;
+const TABLE_BOTTOM_MARGIN = 1 - TABLE_TOP_CLEAR - TABLE_HEIGHT_FRACTION;
+const TABLE_BOTTOM_NDC_TARGET = -1 + 2 * TABLE_BOTTOM_MARGIN;
 
 function resolveTableViewOffsetY(
   camera: THREE.PerspectiveCamera,
@@ -124,6 +126,33 @@ function fitTableToSize(root: THREE.Object3D, targetSize: number) {
   root.scale.x *= 1.1;
   root.scale.z *= 1.06;
 
+  root.updateMatrixWorld(true);
+  const fitted = new THREE.Box3().setFromObject(root);
+  root.position.y -= fitted.min.y;
+}
+
+function measureTableScreenHeightFraction(
+  root: THREE.Object3D,
+  tablePos: [number, number, number],
+  camera: THREE.Camera,
+) {
+  const box = new THREE.Box3().setFromObject(root);
+  const bottom = new THREE.Vector3(0, tablePos[1], tablePos[2]);
+  const top = new THREE.Vector3(0, tablePos[1] + box.max.y, tablePos[2]);
+  bottom.project(camera);
+  top.project(camera);
+  return Math.abs(top.y - bottom.y) / 2;
+}
+
+function scaleTableToScreenBand(
+  root: THREE.Object3D,
+  tablePos: [number, number, number],
+  camera: THREE.Camera,
+  targetFraction: number,
+) {
+  const fraction = measureTableScreenHeightFraction(root, tablePos, camera);
+  if (fraction < 0.001) return;
+  root.scale.multiplyScalar(targetFraction / fraction);
   root.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(root);
   root.position.y -= fitted.min.y;
@@ -503,7 +532,8 @@ function ResponsiveCamera() {
     camera.lookAt(...target);
 
     const tablePos = getTablePosition(size.width);
-    resolveTableViewOffsetY(camera, size.width, size.height, tablePos);
+    camera.clearViewOffset();
+    camera.updateProjectionMatrix();
   }, [camera, size.width, size.height, cam.fov, cam.position, target]);
 
   return (
@@ -521,7 +551,7 @@ function TableModel({
   const tableUrl = useMemo(() => getTableModelUrl(), []);
   const { scene: tableRoot } = useGLTF(tableUrl, false, false, extendGltfLoader);
   const groupRef = useRef<THREE.Group>(null);
-  const { size } = useThree();
+  const { size, camera } = useThree();
   const targetScale = getTableScale(size.width, size.height);
   const tablePos = getTablePosition(size.width);
   const readyRef = useRef(false);
@@ -529,6 +559,12 @@ function TableModel({
   useLayoutEffect(() => {
     fitTableToSize(tableRoot, targetScale);
     applyTableMaterials(tableRoot);
+
+    if (camera instanceof THREE.PerspectiveCamera) {
+      resolveTableViewOffsetY(camera, size.width, size.height, tablePos);
+      scaleTableToScreenBand(tableRoot, tablePos, camera, TABLE_HEIGHT_FRACTION);
+      resolveTableViewOffsetY(camera, size.width, size.height, tablePos);
+    }
 
     const box = new THREE.Box3().setFromObject(tableRoot);
     const surfaceInset = size.width < 768 ? 0.006 : 0.004;
@@ -538,7 +574,7 @@ function TableModel({
       readyRef.current = true;
       onReady();
     }
-  }, [tableRoot, targetScale, tablePos, size.width, onReady, onSurfaceY]);
+  }, [tableRoot, targetScale, tablePos, size.width, size.height, camera, onReady, onSurfaceY]);
 
   return (
     <group ref={groupRef} position={tablePos}>
