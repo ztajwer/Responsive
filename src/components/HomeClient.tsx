@@ -11,7 +11,7 @@ class HomeErrorBoundary extends Component<{ children: ReactNode }, { failed: boo
   }
 
   componentDidCatch(error: Error) {
-    console.warn("[HomeClient]", error.message);
+    console.error("[HomeClient]", error);
   }
 
   render() {
@@ -19,9 +19,15 @@ class HomeErrorBoundary extends Component<{ children: ReactNode }, { failed: boo
       return (
         <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-maj-cream">
           <p className="font-serif text-lg tracking-wide text-maj-brown">MAJ Boutique</p>
+          <p className="max-w-xs px-6 text-center font-sans text-[10px] leading-relaxed tracking-wide text-maj-brown/60">
+            Something went wrong loading the experience. Try a hard refresh.
+          </p>
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              this.setState({ failed: false });
+              window.location.reload();
+            }}
             className="font-sans text-[10px] uppercase tracking-[0.3em] text-maj-gold"
           >
             Reload
