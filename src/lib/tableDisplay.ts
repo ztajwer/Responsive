@@ -29,7 +29,7 @@ export const TABLE_DISPLAY = {
     groundY: 0.002,
   },
   /** Push framing toward bottom band (mobile canvas is pinned low). */
-  viewOffsetY: { mobile: 0.16, tablet: 0.2, desktop: 0.14 },
+  viewOffsetY: { mobile: 0.44, tablet: 0.24, desktop: 0.16 },
 } as const;
 
 export type TableBreakpoint = "mobile" | "tablet" | "desktop";
@@ -77,7 +77,7 @@ export function getTableViewOffsetY(width: number, height = width) {
   if (height <= 0) return base;
 
   if (bp === "mobile" && height < 680) {
-    return base + 0.04;
+    return base + 0.06;
   }
 
   if (bp === "tablet" && height < 720) {
