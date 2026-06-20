@@ -36,7 +36,7 @@ const TABLE_LEG_COLOR = colors.tableLeg;
 const TABLE_HEIGHT_FRACTION = 0.218;
 const TABLE_MAX_WIDTH_FRACTION = 0.68;
 const TABLE_CENTER_NDC_TARGET = -0.18;
-const PRODUCT_STAGGER_MS = 160;
+const PRODUCT_STAGGER_MS = 90;
 const HOVER_LIFT = 0.044;
 const HOVER_SCALE = 1.12;
 
@@ -489,7 +489,7 @@ function TableProducts({
     () => getProductRowLayout(surfaceY, size.width, size.height, displaySize, tableTopWidth),
     [surfaceY, size.width, size.height, displaySize, tableTopWidth],
   );
-  const [visibleCount, setVisibleCount] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(() => Math.min(2, layout.length));
 
   useEffect(() => {
     if (visibleCount >= layout.length) return;
@@ -634,12 +634,12 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.78 : 0.74} color="#FFFCF8" />
-      <hemisphereLight args={["#FFFFFF", "#9A7650", mobile ? 0.48 : 0.46]} />
+      <ambientLight intensity={mobile ? 0.72 : 0.68} color="#FFFBF6" />
+      <hemisphereLight args={["#FFFEF8", "#8E7048", mobile ? 0.42 : 0.4]} />
 
       <directionalLight
         position={[0.15, 5.2, 2.6]}
-        intensity={mobile ? 0.88 : 0.92}
+        intensity={mobile ? 0.82 : 0.86}
         color="#FFFAF5"
         castShadow={!mobile}
         shadow-mapSize={[512, 512]}
@@ -653,7 +653,7 @@ function TableScene({
 
       <directionalLight
         position={[-0.4, 2.4, 1.1]}
-        intensity={mobile ? 0.42 : 0.46}
+        intensity={mobile ? 0.38 : 0.42}
         color="#FFF6EC"
       />
 
@@ -662,8 +662,8 @@ function TableScene({
       {surfaceY !== null && (
         <pointLight
           position={[0, surfaceY + 0.2, 0.52]}
-          intensity={0.62}
-          color="#FFF9F2"
+          intensity={0.48}
+          color="#FFF8F0"
           distance={5.5}
         />
       )}
@@ -733,7 +733,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
           gl.shadowMap.enabled = !mobile;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = mobile ? 1.1 : 1.08;
+          gl.toneMappingExposure = mobile ? 1.06 : 1.04;
           gl.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >

@@ -96,13 +96,7 @@ export default function RootLayout({
           rel="dns-prefetch"
           href="https://media.githubusercontent.com/media/ztajwer/Responsive/main/public"
         />
-        <link
-          rel="preload"
-          href={`${GLB_CDN_BASE}/table-3d.glb`}
-          as="fetch"
-          crossOrigin="anonymous"
-        />
-        {SHOP_GLB_FILES.slice(1, 3).map((file) => (
+        {SHOP_GLB_FILES.map((file) => (
           <link
             key={file}
             rel="preload"

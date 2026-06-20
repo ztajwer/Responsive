@@ -17,7 +17,7 @@ import {
   startBoutiqueAudioFromGesture,
   stopBoutiqueAudio,
 } from "@/lib/boutiqueAudio";
-import { bootShopModels, warmShopExperienceModule } from "@/lib/modelPreload";
+import { warmShopExperienceModule } from "@/lib/modelPreload";
 import { useScrollDoorProgress } from "@/hooks/useScrollDoorProgress";
 
 const ShopExperience = dynamic(() => import("./jewelry/ShopExperience"), {
@@ -84,12 +84,6 @@ function ExperienceInner() {
     preloadBoutiqueAudio();
     warmShopExperienceModule();
   }, [ready]);
-
-  useEffect(() => {
-    if (!ready || entered) return;
-    if (doorProgress < 0.35) return;
-    bootShopModels();
-  }, [ready, entered, doorProgress]);
 
   useEffect(() => {
     if (entered) stopBoutiqueAudio();

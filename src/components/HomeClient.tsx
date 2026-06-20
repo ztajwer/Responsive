@@ -1,7 +1,8 @@
 "use client";
 
-import { Component, type ReactNode } from "react";
+import { Component, useEffect, type ReactNode } from "react";
 import Experience from "@/components/Experience";
+import { bootFastPipeline } from "@/lib/modelPreload";
 
 class HomeErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
@@ -40,6 +41,10 @@ class HomeErrorBoundary extends Component<{ children: ReactNode }, { failed: boo
 }
 
 export default function HomeClient() {
+  useEffect(() => {
+    bootFastPipeline();
+  }, []);
+
   return (
     <HomeErrorBoundary>
       <div className="fixed inset-0 h-[100dvh] w-screen bg-maj-cream">

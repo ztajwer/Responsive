@@ -4,18 +4,15 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import LoaderFallingGlitter from "./LoaderFallingGlitter";
 import {
-  bootShopModels,
-  preloadDoorImages,
-  preloadShopImages,
-  warmShopExperienceModule,
+  bootFastPipeline,
 } from "@/lib/modelPreload";
 
 interface LoaderProps {
   onComplete: () => void;
 }
 
-const LOADER_DURATION_MS = 2000;
-const FADE_DURATION_MS = 350;
+const LOADER_DURATION_MS = 1800;
+const FADE_DURATION_MS = 300;
 
 export default function Loader({ onComplete }: LoaderProps) {
   const [visible, setVisible] = useState(true);
@@ -24,10 +21,7 @@ export default function Loader({ onComplete }: LoaderProps) {
   const finishedRef = useRef(false);
 
   useEffect(() => {
-    bootShopModels();
-    preloadDoorImages();
-    preloadShopImages();
-    warmShopExperienceModule();
+    bootFastPipeline();
   }, []);
 
   const finish = useCallback(() => {

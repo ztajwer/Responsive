@@ -1,28 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import {
-  bootShopModels,
-  preloadDoorImages,
-  preloadNextProductModel,
-  preloadShopImages,
-  staggerRemainingProductPreloads,
-  warmShopExperienceModule,
-} from "@/lib/modelPreload";
+import { bootFastPipeline } from "@/lib/modelPreload";
 
-export default function ModelPreloader({ doorsReady }: { doorsReady: boolean }) {
+/** Runs once on first paint — parallel asset warm-up. */
+export default function ModelPreloader(_props: { doorsReady: boolean }) {
   useEffect(() => {
-    bootShopModels();
-    preloadDoorImages();
-    preloadShopImages();
-    warmShopExperienceModule();
+    bootFastPipeline();
   }, []);
-
-  useEffect(() => {
-    if (!doorsReady) return;
-    preloadNextProductModel(1);
-    staggerRemainingProductPreloads(2, 400);
-  }, [doorsReady]);
 
   return null;
 }
