@@ -13,9 +13,9 @@ export const TABLE_DISPLAY = {
     desktop: [0, 0.16, 0.3] as [number, number, number],
   },
   scale: {
-    mobile: 0.58,
-    tablet: 0.4,
-    desktop: 0.36,
+    mobile: 0.5,
+    tablet: 0.38,
+    desktop: 0.34,
   },
   camera: {
     mobile: { position: [0, 0.52, 1.9] as [number, number, number], fov: 42 },
@@ -43,8 +43,8 @@ export function getTableScale(width: number, height = width) {
   const bp = getTableBreakpoint(width);
   const base = TABLE_DISPLAY.scale[bp];
   if (bp !== "mobile" || height <= 0) return base;
-  if (height < 680) return base + 0.04;
-  if (height < 820) return base + 0.02;
+  if (height < 400) return base + 0.02;
+  if (height < 680) return base + 0.03;
   return base;
 }
 

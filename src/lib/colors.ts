@@ -7,4 +7,6 @@ export const colors = {
   cream: "#FAF6F1",
   brown: "#3D2B1F",
   brownMid: "#5C4033",
+  table: "#E4B993",
+  tableLeg: "#D4A67E",
 } as const;
