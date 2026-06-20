@@ -27,22 +27,11 @@ export const TABLE_DISPLAY = {
     blur: { mobile: 4.8, tablet: 4.2, desktop: 3.6 },
     groundY: 0.002,
   },
+  /** Nudge within bottom canvas band (layer is already at bottom on mobile) */
   viewOffsetY: { mobile: 0.1, tablet: 0.18, desktop: 0.12 },
-  /** Mobile-only: expand virtual film height so table locks to bottom edge. */
-  mobileFilmScale: 1.82,
-  mobileBottomInsetPx: 6,
 } as const;
 
 export type TableBreakpoint = "mobile" | "tablet" | "desktop";
-
-export interface TableViewFraming {
-  fullWidth: number;
-  fullHeight: number;
-  offsetX: number;
-  offsetY: number;
-  width: number;
-  height: number;
-}
 
 export function getTableBreakpoint(width: number): TableBreakpoint {
   if (width < 768) return "mobile";
@@ -54,8 +43,8 @@ export function getTableScale(width: number, height = width) {
   const bp = getTableBreakpoint(width);
   const base = TABLE_DISPLAY.scale[bp];
   if (bp !== "mobile" || height <= 0) return base;
-  if (height < 680) return base + 0.04;
-  if (height < 820) return base + 0.02;
+  if (height < 680) return base + 0.06;
+  if (height < 820) return base + 0.04;
   return base;
 }
 
@@ -95,33 +84,4 @@ export function getTableViewOffsetY(width: number, height = width) {
   }
 
   return base;
-}
-
-/** setViewOffset args — mobile crops to bottom strip so table sits on screen bottom. */
-export function getTableViewFraming(viewWidth: number, viewHeight: number): TableViewFraming {
-  if (getTableBreakpoint(viewWidth) === "mobile" && viewHeight > 0) {
-    const fullHeight = viewHeight * TABLE_DISPLAY.mobileFilmScale;
-    const offsetY = Math.max(
-      0,
-      fullHeight - viewHeight - TABLE_DISPLAY.mobileBottomInsetPx,
-    );
-    return {
-      fullWidth: viewWidth,
-      fullHeight,
-      offsetX: 0,
-      offsetY,
-      width: viewWidth,
-      height: viewHeight,
-    };
-  }
-
-  const offsetY = getTableViewOffsetY(viewWidth, viewHeight);
-  return {
-    fullWidth: viewWidth,
-    fullHeight: viewHeight,
-    offsetX: 0,
-    offsetY: viewHeight * offsetY,
-    width: viewWidth,
-    height: viewHeight,
-  };
 }

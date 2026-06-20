@@ -119,7 +119,7 @@ function ExperienceInner() {
 
   return (
     <div className="relative h-full w-full bg-maj-cream">
-      <ModelPreloader />
+      <ModelPreloader doorsReady={ready} />
       <CursorGlitterTrail />
       <Loader onComplete={handleLoadComplete} />
 
@@ -133,7 +133,7 @@ function ExperienceInner() {
 
       {onDoorScreen && <DoorBackground fadeProgress={doorProgress} />}
 
-      {ready && <ShopExperience active={ready} visible={entered} />}
+      {ready && entered && <ShopExperience visible={entered} />}
 
       {onDoorScreen && (
         <DoorSceneCanvas
