@@ -1,6 +1,7 @@
 "use client";
 
-import { Component, type ReactNode } from "react";
+import { Component, useEffect, type ReactNode } from "react";
+import { startShopModelLoads } from "@/lib/modelPreload";
 import JewelryHome from "./JewelryHome";
 
 interface ShopExperienceProps {
@@ -43,6 +44,10 @@ class ShopErrorBoundary extends Component<{ children: ReactNode }, { failed: boo
 }
 
 export default function ShopExperience({ visible }: ShopExperienceProps) {
+  useEffect(() => {
+    if (visible) startShopModelLoads();
+  }, [visible]);
+
   if (!visible) return null;
 
   return (

@@ -7,6 +7,7 @@ const bytePrefetched = new Set<string>();
 const gltfStarted = new Set<string>();
 let productStaggerScheduled = false;
 let pipelineStarted = false;
+let shopLoadsStarted = false;
 
 const SHOP_IMAGES = ["/background.png", "/main_mob_bg.png"] as const;
 const DOOR_IMAGES = ["/door_sm.png", "/door_bg.png"] as const;
@@ -30,9 +31,13 @@ function preloadImage(src: string) {
   img.src = src;
 }
 
-/** Network-only — all GLB URLs in parallel (safe). */
-export function prefetchAllModelBytes() {
+/** Network-only — table first; products when shop opens. */
+export function prefetchTableBytes() {
   prefetchModelBytes(getTableModelUrl());
+}
+
+export function prefetchAllModelBytes() {
+  prefetchTableBytes();
   getProductModelUrls().forEach(prefetchModelBytes);
 }
 
@@ -50,7 +55,7 @@ export function preloadNextProductModel(index: number) {
   preloadGltf(url);
 }
 
-export function staggerRemainingProductPreloads(fromIndex = 2, gapMs = 280) {
+export function staggerRemainingProductPreloads(fromIndex = 1, gapMs = 400) {
   if (productStaggerScheduled) return;
   productStaggerScheduled = true;
 
@@ -61,16 +66,13 @@ export function staggerRemainingProductPreloads(fromIndex = 2, gapMs = 280) {
   }
 }
 
-/** One-shot fast boot: bytes + table + 2 products now, rest staggered, all images + shop chunk. */
+/** Loader boot: images + table bytes + table GLTF only (one parse — safe for GPU). */
 export function bootFastPipeline() {
   if (pipelineStarted) return;
   pipelineStarted = true;
 
-  prefetchAllModelBytes();
+  prefetchTableBytes();
   preloadTableModel();
-  preloadNextProductModel(0);
-  preloadNextProductModel(1);
-  staggerRemainingProductPreloads(2, 280);
 
   for (const src of [...LOADER_IMAGES, ...DOOR_IMAGES, ...SHOP_IMAGES]) {
     preloadImage(src);
@@ -79,13 +81,24 @@ export function bootFastPipeline() {
   warmShopExperienceModule();
 }
 
+/** Shop view: prefetch product bytes, parse first product, stagger the rest. */
+export function startShopModelLoads() {
+  if (shopLoadsStarted) return;
+  shopLoadsStarted = true;
+
+  preloadTableModel();
+  getProductModelUrls().forEach(prefetchModelBytes);
+  preloadNextProductModel(0);
+  staggerRemainingProductPreloads(1, 400);
+}
+
 /** @deprecated Use bootFastPipeline */
 export function bootShopModels() {
   bootFastPipeline();
 }
 
 export function preloadProductModels(): Promise<void> {
-  bootFastPipeline();
+  startShopModelLoads();
   return Promise.resolve();
 }
 

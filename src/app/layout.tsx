@@ -96,15 +96,12 @@ export default function RootLayout({
           rel="dns-prefetch"
           href="https://media.githubusercontent.com/media/ztajwer/Responsive/main/public"
         />
-        {SHOP_GLB_FILES.map((file) => (
-          <link
-            key={file}
-            rel="preload"
-            href={`${GLB_CDN_BASE}/${file}`}
-            as="fetch"
-            crossOrigin="anonymous"
-          />
-        ))}
+        <link
+          rel="preload"
+          href={`${GLB_CDN_BASE}/${SHOP_GLB_FILES[0]}`}
+          as="fetch"
+          crossOrigin="anonymous"
+        />
         <link rel="preload" href="/bg.png" as="image" />
         <link rel="preload" href="/logo_outline.png" as="image" />
         <link rel="preload" href="/wh_logo-removebg-preview.png" as="image" />

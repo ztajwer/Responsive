@@ -36,7 +36,7 @@ const TABLE_LEG_COLOR = colors.tableLeg;
 const TABLE_HEIGHT_FRACTION = 0.218;
 const TABLE_MAX_WIDTH_FRACTION = 0.68;
 const TABLE_CENTER_NDC_TARGET = -0.18;
-const PRODUCT_STAGGER_MS = 90;
+const PRODUCT_STAGGER_MS = 220;
 const HOVER_LIFT = 0.044;
 const HOVER_SCALE = 1.12;
 
@@ -489,7 +489,7 @@ function TableProducts({
     () => getProductRowLayout(surfaceY, size.width, size.height, displaySize, tableTopWidth),
     [surfaceY, size.width, size.height, displaySize, tableTopWidth],
   );
-  const [visibleCount, setVisibleCount] = useState(() => Math.min(2, layout.length));
+  const [visibleCount, setVisibleCount] = useState(1);
 
   useEffect(() => {
     if (visibleCount >= layout.length) return;
@@ -657,7 +657,9 @@ function TableScene({
         color="#FFF6EC"
       />
 
-      <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} onTableMetrics={handleTableMetrics} />
+      <Suspense fallback={null}>
+        <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} onTableMetrics={handleTableMetrics} />
+      </Suspense>
 
       {surfaceY !== null && (
         <pointLight
@@ -695,6 +697,7 @@ function TableLoader() {
 export default function JewelryHome({ visible }: JewelryHomeProps) {
   const [tableReady, setTableReady] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const [gpuLost, setGpuLost] = useState(false);
   const handleReady = useCallback(() => setTableReady(true), []);
 
   useEffect(() => {
@@ -715,7 +718,19 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
       }}
       onWheel={(e) => e.preventDefault()}
     >
-      {visible && !tableReady && <TableLoader />}
+      {visible && !tableReady && !gpuLost && <TableLoader />}
+
+      {gpuLost && (
+        <div className="absolute inset-x-0 bottom-24 z-20 flex justify-center px-6">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="font-sans text-[10px] uppercase tracking-[0.3em] text-maj-gold"
+          >
+            Reload 3D view
+          </button>
+        </div>
+      )}
 
       <Canvas
         shadows={!mobile}
@@ -734,7 +749,14 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = mobile ? 1.06 : 1.04;
-          gl.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
+          gl.domElement.addEventListener(
+            "webglcontextlost",
+            (e) => {
+              e.preventDefault();
+              setGpuLost(true);
+            },
+            false,
+          );
         }}
       >
         <Suspense fallback={null}>
