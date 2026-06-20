@@ -19,8 +19,8 @@ import {
   getTableTarget,
 } from "@/lib/tableDisplay";
 import {
-  getProductArcLayout,
   getProductDisplaySize,
+  getProductRowLayout,
 } from "@/lib/productDisplay";
 import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
 import { colors } from "@/lib/colors";
@@ -32,12 +32,12 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Big table, upper area of the bottom canvas band */
-const TABLE_HEIGHT_FRACTION = 0.5;
-const TABLE_CENTER_NDC_TARGET = 0.12;
+/** Medium table, center of page — slightly below middle */
+const TABLE_HEIGHT_FRACTION = 0.26;
+const TABLE_CENTER_NDC_TARGET = -0.06;
 const PRODUCT_STAGGER_MS = 220;
-const HOVER_LIFT = 0.048;
-const HOVER_SCALE = 1.08;
+const HOVER_LIFT = 0.038;
+const HOVER_SCALE = 1.1;
 
 function getTableCenterY(root: THREE.Object3D, tablePos: [number, number, number]) {
   const box = new THREE.Box3().setFromObject(root);
@@ -103,14 +103,15 @@ function applyTableMaterials(root: THREE.Object3D) {
 
       const isLeg = name.includes("leg") || name.includes("base") || name.includes("bottom");
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
-      mat.color.lerp(new THREE.Color(colors.goldLight), isLeg ? 0.06 : 0.1);
+      mat.color.lerp(new THREE.Color(colors.roseGoldLight), isLeg ? 0.2 : 0.14);
+      mat.color.lerp(new THREE.Color(colors.goldLight), isLeg ? 0.1 : 0.16);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#FFF8E8").multiplyScalar(0.045);
+        mat.emissive.set("#FFF4E8").multiplyScalar(isLeg ? 0.035 : 0.05);
       }
-      if ("metalness" in mat) mat.metalness = 0.03;
-      if ("roughness" in mat) mat.roughness = 0.55;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.12;
+      if ("metalness" in mat) mat.metalness = isLeg ? 0.04 : 0.025;
+      if ("roughness" in mat) mat.roughness = isLeg ? 0.62 : 0.48;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.18;
     });
   });
 }
@@ -130,8 +131,8 @@ function fitTableToSize(root: THREE.Object3D, targetSize: number) {
     root.scale.setScalar(targetSize / maxDim);
   }
 
-  root.scale.x *= 1.18;
-  root.scale.z *= 1.12;
+  root.scale.x *= 1.06;
+  root.scale.z *= 1.04;
 
   root.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(root);
@@ -180,16 +181,15 @@ function fitModelToSize(root: THREE.Object3D, targetSize: number) {
   }
 }
 
-function fitProductToSize(root: THREE.Object3D, targetSize: number) {
+function fitProductToUniformSize(root: THREE.Object3D, targetHeight: number) {
   root.scale.set(1, 1, 1);
   root.position.set(0, 0, 0);
   root.updateMatrixWorld(true);
 
   const box = new THREE.Box3().setFromObject(root);
   const size = box.getSize(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  if (maxDim > 0) {
-    root.scale.setScalar(targetSize / maxDim);
+  if (size.y > 0) {
+    root.scale.setScalar(targetHeight / size.y);
   }
 
   root.updateMatrixWorld(true);
@@ -254,7 +254,7 @@ function enhanceProductMaterials(root: THREE.Object3D) {
   });
 }
 
-const GLITTER_COUNT = 16;
+const GLITTER_COUNT = 28;
 
 interface ProductBounds {
   radius: number;
@@ -314,7 +314,7 @@ function ProductGlitter({
 
     const pos = points.geometry.attributes.position as THREE.BufferAttribute;
     const arr = pos.array as Float32Array;
-    const spawnRate = intensityRef.current * delta * 16;
+    const spawnRate = intensityRef.current * delta * 22;
 
     for (let i = 0; i < GLITTER_COUNT; i++) {
       const p = particles.current[i];
@@ -357,10 +357,10 @@ function ProductGlitter({
   return (
     <points ref={pointsRef} geometry={geometry} frustumCulled={false}>
       <pointsMaterial
-        size={0.016}
-        color="#FFF6D8"
+        size={0.02}
+        color="#FFF8E6"
         transparent
-        opacity={0.92}
+        opacity={0.95}
         depthWrite={false}
         blending={THREE.AdditiveBlending}
         sizeAttenuation
@@ -393,7 +393,7 @@ const ProductModel = memo(function ProductModel({
   const { scene: productRoot } = useGLTF(url, false, false, extendGltfLoader);
 
   useLayoutEffect(() => {
-    fitProductToSize(productRoot, displaySize);
+    fitProductToUniformSize(productRoot, displaySize);
     enhanceProductMaterials(productRoot);
 
     const box = new THREE.Box3().setFromObject(productRoot);
@@ -411,11 +411,11 @@ const ProductModel = memo(function ProductModel({
 
     if (!groupRef.current) return;
     groupRef.current.position.set(position[0], position[1] + t * HOVER_LIFT, position[2]);
-    groupRef.current.rotation.set(rotation[0], rotation[1] + t * 0.06, rotation[2]);
+    groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2]);
     groupRef.current.scale.setScalar(1 + t * (HOVER_SCALE - 1));
 
     if (glowRef.current) {
-      glowRef.current.intensity = t * 1.35;
+      glowRef.current.intensity = t * 1.65;
     }
   });
 
@@ -477,7 +477,7 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
     [size.width, size.height],
   );
   const layout = useMemo(
-    () => getProductArcLayout(surfaceY, size.width, size.height, displaySize),
+    () => getProductRowLayout(surfaceY, size.width, size.height, displaySize),
     [surfaceY, size.width, size.height, displaySize],
   );
   const [visibleCount, setVisibleCount] = useState(1);

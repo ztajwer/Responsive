@@ -18,10 +18,10 @@ export function getProductTargetPixels(
   viewportHeight = viewportWidth,
 ): number {
   if (viewportWidth < 768) {
-    return viewportHeight < 360 ? 148 : 172;
+    return viewportHeight < 360 ? 118 : 132;
   }
-  if (viewportWidth < 1024) return 168;
-  return 186;
+  if (viewportWidth < 1024) return 138;
+  return 152;
 }
 
 export function getProductDisplaySize(
@@ -39,45 +39,51 @@ export function getProductDisplaySize(
   );
 
   const worldSize = worldSizeFromPixels(targetPixels, viewportHeight, cam.fov, distance);
-  const maxWorld = viewportWidth < 768 ? 0.26 : viewportWidth < 1024 ? 0.24 : 0.24;
+  const maxWorld = viewportWidth < 768 ? 0.19 : viewportWidth < 1024 ? 0.18 : 0.17;
 
   return Math.min(worldSize, maxWorld);
 }
 
-export interface ProductArcItem {
+export interface ProductLayoutItem {
   url: string;
   position: [number, number, number];
   rotation: [number, number, number];
   displaySize: number;
 }
 
-/** Curved arc of products sitting on the table surface */
-export function getProductArcLayout(
+/** Straight row — equal spacing, same Z, no arc rotation */
+export function getProductRowLayout(
   surfaceY: number,
   viewportWidth: number,
   _viewportHeight: number,
   displaySize: number,
-): ProductArcItem[] {
+): ProductLayoutItem[] {
   const mobile = viewportWidth < 768;
   const models = getProductModelUrls();
   const count = models.length;
   const tablePos = getTablePosition(viewportWidth);
-  const arcRadius = Math.max(mobile ? 0.3 : 0.36, displaySize * (mobile ? 2.55 : 2.95));
-  const arcSpread = mobile ? 1.02 : 1.14;
-  const forwardZ = tablePos[2] + (mobile ? 0.06 : 0.08);
-  const liftAboveTable = mobile ? 0.018 : 0.024;
+  const spacing = displaySize * (mobile ? 1.02 : 1.08);
+  const totalWidth = spacing * (count - 1);
+  const forwardZ = tablePos[2] + (mobile ? 0.045 : 0.052);
+  const liftAboveTable = mobile ? 0.012 : 0.016;
 
   return models.map((url, index) => {
-    const t = index / (count - 1);
-    const angle = (t - 0.5) * arcSpread;
-    const x = Math.sin(angle) * arcRadius;
-    const z = forwardZ + Math.cos(angle) * arcRadius * 0.12;
-
+    const x = -totalWidth / 2 + index * spacing;
     return {
       url,
-      position: [x, surfaceY + liftAboveTable, z],
-      rotation: [0, -angle * 0.32, 0],
+      position: [x, surfaceY + liftAboveTable, forwardZ],
+      rotation: [0, 0, 0],
       displaySize,
     };
   });
+}
+
+/** @deprecated Use getProductRowLayout */
+export function getProductArcLayout(
+  surfaceY: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  displaySize: number,
+): ProductLayoutItem[] {
+  return getProductRowLayout(surfaceY, viewportWidth, viewportHeight, displaySize);
 }

@@ -124,14 +124,9 @@ body {
 
 .shop-table-layer {
   position: absolute;
-  top: auto;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  inset: 0;
   width: 100%;
-  height: var(--table-band-height);
-  min-height: 260px;
-  max-height: 400px;
+  height: 100%;
   z-index: 10;
   touch-action: none;
   overflow: hidden;
@@ -144,12 +139,6 @@ body {
     animation: shopBgZoomMobile 28s cubic-bezier(0.22, 0.61, 0.36, 1) infinite alternate;
     background-image: url("/main_mob_bg.png");
     background-position: center 58%;
-  }
-
-  .shop-table-layer {
-    height: min(48vh, 440px);
-    min-height: 300px;
-    max-height: 460px;
   }
 }
 
