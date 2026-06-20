@@ -102,7 +102,7 @@ export default function RootLayout({
           as="fetch"
           crossOrigin="anonymous"
         />
-        {SHOP_GLB_FILES.slice(1).map((file) => (
+        {SHOP_GLB_FILES.slice(1, 3).map((file) => (
           <link
             key={file}
             rel="preload"

@@ -4,18 +4,25 @@ import { useEffect } from "react";
 import {
   bootShopModels,
   preloadDoorImages,
+  preloadNextProductModel,
   preloadShopImages,
+  staggerRemainingProductPreloads,
   warmShopExperienceModule,
 } from "@/lib/modelPreload";
 
-/** Fires on first paint — parallel GLB fetch + shop chunk warm. */
-export default function ModelPreloader({ doorsReady: _doorsReady }: { doorsReady: boolean }) {
+export default function ModelPreloader({ doorsReady }: { doorsReady: boolean }) {
   useEffect(() => {
     bootShopModels();
     preloadDoorImages();
     preloadShopImages();
     warmShopExperienceModule();
   }, []);
+
+  useEffect(() => {
+    if (!doorsReady) return;
+    preloadNextProductModel(1);
+    staggerRemainingProductPreloads(2, 400);
+  }, [doorsReady]);
 
   return null;
 }

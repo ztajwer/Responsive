@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { LoadingProvider } from "@/context/LoadingContext";
 import Loader from "./Loader";
@@ -11,14 +12,18 @@ import DoorChimeAudio from "./DoorChimeAudio";
 import CursorGlitterTrail from "./CursorGlitterTrail";
 import DoorSceneCanvas from "./DoorSceneCanvas";
 import ModelPreloader from "./ModelPreloader";
-import ShopExperience from "./jewelry/ShopExperience";
 import {
   preloadBoutiqueAudio,
   startBoutiqueAudioFromGesture,
   stopBoutiqueAudio,
 } from "@/lib/boutiqueAudio";
-import { bootShopModels } from "@/lib/modelPreload";
+import { bootShopModels, warmShopExperienceModule } from "@/lib/modelPreload";
 import { useScrollDoorProgress } from "@/hooks/useScrollDoorProgress";
+
+const ShopExperience = dynamic(() => import("./jewelry/ShopExperience"), {
+  ssr: false,
+  loading: () => null,
+});
 
 function ExperienceInner() {
   const [ready, setReady] = useState(false);
@@ -77,8 +82,18 @@ function ExperienceInner() {
   useEffect(() => {
     if (!ready) return;
     preloadBoutiqueAudio();
-    bootShopModels();
+    warmShopExperienceModule();
   }, [ready]);
+
+  useEffect(() => {
+    if (!ready || entered) return;
+    if (doorProgress < 0.35) return;
+    bootShopModels();
+  }, [ready, entered, doorProgress]);
+
+  useEffect(() => {
+    if (entered) stopBoutiqueAudio();
+  }, [entered]);
 
   useEffect(() => {
     if (!onDoorScreen) return;

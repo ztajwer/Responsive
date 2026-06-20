@@ -21,16 +21,10 @@ function preloadGltf(url: string) {
   useGLTF.preload(url, false, false, extendGltfLoader);
 }
 
-/** Start all shop GLB downloads + parses as early as possible. */
-export function bootShopModels() {
-  const table = getTableModelUrl();
-  const products = getProductModelUrls();
-
-  prefetchModelBytes(table);
-  products.forEach(prefetchModelBytes);
-
-  preloadGltf(table);
-  products.forEach(preloadGltf);
+/** Network-only — safe to run all URLs in parallel. */
+export function prefetchAllModelBytes() {
+  prefetchModelBytes(getTableModelUrl());
+  getProductModelUrls().forEach(prefetchModelBytes);
 }
 
 export function preloadTableModel() {
@@ -39,20 +33,33 @@ export function preloadTableModel() {
   preloadGltf(url);
 }
 
-export function preloadProductModels(): Promise<void> {
-  getProductModelUrls().forEach((url) => {
-    prefetchModelBytes(url);
-    preloadGltf(url);
-  });
-  return Promise.resolve();
-}
-
 export function preloadNextProductModel(index: number) {
   const urls = getProductModelUrls();
   const url = urls[Math.min(Math.max(index, 0), urls.length - 1)];
   if (!url) return;
   prefetchModelBytes(url);
   preloadGltf(url);
+}
+
+/** Table + first product parse immediately; rest staggered to avoid GPU OOM. */
+export function bootShopModels() {
+  prefetchAllModelBytes();
+  preloadTableModel();
+  preloadNextProductModel(0);
+}
+
+export function staggerRemainingProductPreloads(fromIndex = 1, gapMs = 350) {
+  const urls = getProductModelUrls();
+  for (let i = fromIndex; i < urls.length; i++) {
+    const index = i;
+    window.setTimeout(() => preloadNextProductModel(index), gapMs * (index - fromIndex));
+  }
+}
+
+export function preloadProductModels(): Promise<void> {
+  bootShopModels();
+  staggerRemainingProductPreloads(1);
+  return Promise.resolve();
 }
 
 export function preloadDoorImages() {
@@ -71,15 +78,14 @@ export function preloadShopImages() {
 
 export function scheduleIdle(task: () => void) {
   if (typeof window.requestIdleCallback === "function") {
-    window.requestIdleCallback(() => task(), { timeout: 800 });
+    window.requestIdleCallback(() => task(), { timeout: 1200 });
     return;
   }
-  window.setTimeout(task, 200);
+  window.setTimeout(task, 400);
 }
 
 export function warmShopExperienceModule() {
   void import("@/components/jewelry/ShopExperience");
-  void import("@/components/jewelry/JewelryHome");
 }
 
 export function isModelPreloadStarted(url: string) {
