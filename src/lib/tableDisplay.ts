@@ -13,14 +13,14 @@ export const TABLE_DISPLAY = {
     desktop: [0, 0.14, 0.42] as [number, number, number],
   },
   scale: {
-    mobile: 0.58,
-    tablet: 0.46,
-    desktop: 0.42,
+    mobile: 0.38,
+    tablet: 0.32,
+    desktop: 0.3,
   },
   camera: {
-    mobile: { position: [0, 0.36, 1.62] as [number, number, number], fov: 35 },
-    tablet: { position: [0, 0.34, 1.88] as [number, number, number], fov: 33 },
-    desktop: { position: [0, 0.32, 2.05] as [number, number, number], fov: 31 },
+    mobile: { position: [0, 0.34, 1.88] as [number, number, number], fov: 34 },
+    tablet: { position: [0, 0.32, 2.05] as [number, number, number], fov: 32 },
+    desktop: { position: [0, 0.3, 2.22] as [number, number, number], fov: 30 },
   },
   shadow: {
     scale: { mobile: 1.85, tablet: 1.55, desktop: 1.4 },

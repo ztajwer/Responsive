@@ -18,16 +18,25 @@ export function getProductTargetPixels(
   viewportHeight = viewportWidth,
 ): number {
   if (viewportWidth < 768) {
-    return viewportHeight < 360 ? 118 : 132;
+    return viewportHeight < 360 ? 82 : 92;
   }
-  if (viewportWidth < 1024) return 138;
-  return 152;
+  if (viewportWidth < 1024) return 102;
+  return 112;
 }
 
+/** Product height in world units — proportional to table top width when known */
 export function getProductDisplaySize(
   viewportWidth: number,
   viewportHeight: number,
+  tableTopWidth?: number,
 ): number {
+  if (tableTopWidth && tableTopWidth > 0) {
+    const fromTable = tableTopWidth * 0.072;
+    const min = viewportWidth < 768 ? 0.042 : 0.038;
+    const max = viewportWidth < 768 ? 0.085 : 0.09;
+    return clampRange(fromTable, min, max);
+  }
+
   const cam = getTableCamera(viewportWidth);
   const target = getTableTarget(viewportWidth);
   const targetPixels = getProductTargetPixels(viewportWidth, viewportHeight);
@@ -39,9 +48,13 @@ export function getProductDisplaySize(
   );
 
   const worldSize = worldSizeFromPixels(targetPixels, viewportHeight, cam.fov, distance);
-  const maxWorld = viewportWidth < 768 ? 0.19 : viewportWidth < 1024 ? 0.18 : 0.17;
+  const maxWorld = viewportWidth < 768 ? 0.1 : viewportWidth < 1024 ? 0.095 : 0.09;
 
   return Math.min(worldSize, maxWorld);
+}
+
+function clampRange(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 export interface ProductLayoutItem {
@@ -51,21 +64,23 @@ export interface ProductLayoutItem {
   displaySize: number;
 }
 
-/** Straight row — equal spacing, same Z, no arc rotation */
+/** Straight row — equal spacing on table top, centered */
 export function getProductRowLayout(
   surfaceY: number,
   viewportWidth: number,
   _viewportHeight: number,
   displaySize: number,
+  tableTopWidth?: number,
 ): ProductLayoutItem[] {
   const mobile = viewportWidth < 768;
   const models = getProductModelUrls();
   const count = models.length;
   const tablePos = getTablePosition(viewportWidth);
-  const spacing = displaySize * (mobile ? 1.02 : 1.08);
+  const rowSpan = tableTopWidth && tableTopWidth > 0 ? tableTopWidth * 0.6 : displaySize * 3.2;
+  const spacing = count > 1 ? rowSpan / (count - 1) : 0;
   const totalWidth = spacing * (count - 1);
-  const forwardZ = tablePos[2] + (mobile ? 0.045 : 0.052);
-  const liftAboveTable = mobile ? 0.012 : 0.016;
+  const forwardZ = tablePos[2] + (mobile ? 0.038 : 0.044);
+  const liftAboveTable = mobile ? 0.01 : 0.014;
 
   return models.map((url, index) => {
     const x = -totalWidth / 2 + index * spacing;
@@ -84,6 +99,7 @@ export function getProductArcLayout(
   viewportWidth: number,
   viewportHeight: number,
   displaySize: number,
+  tableTopWidth?: number,
 ): ProductLayoutItem[] {
-  return getProductRowLayout(surfaceY, viewportWidth, viewportHeight, displaySize);
+  return getProductRowLayout(surfaceY, viewportWidth, viewportHeight, displaySize, tableTopWidth);
 }

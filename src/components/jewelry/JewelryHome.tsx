@@ -32,9 +32,10 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Medium table, center of page — slightly below middle */
-const TABLE_HEIGHT_FRACTION = 0.26;
-const TABLE_CENTER_NDC_TARGET = -0.06;
+/** Medium table — slightly lower on screen */
+const TABLE_HEIGHT_FRACTION = 0.145;
+const TABLE_MAX_WIDTH_FRACTION = 0.54;
+const TABLE_CENTER_NDC_TARGET = -0.14;
 const PRODUCT_STAGGER_MS = 220;
 const HOVER_LIFT = 0.038;
 const HOVER_SCALE = 1.1;
@@ -131,9 +132,6 @@ function fitTableToSize(root: THREE.Object3D, targetSize: number) {
     root.scale.setScalar(targetSize / maxDim);
   }
 
-  root.scale.x *= 1.06;
-  root.scale.z *= 1.04;
-
   root.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(root);
   root.position.y -= fitted.min.y;
@@ -152,18 +150,45 @@ function measureTableScreenHeightFraction(
   return Math.abs(top.y - bottom.y) / 2;
 }
 
-function scaleTableToScreenBand(
+function measureTableScreenWidthFraction(
   root: THREE.Object3D,
   tablePos: [number, number, number],
   camera: THREE.Camera,
-  targetFraction: number,
 ) {
-  const fraction = measureTableScreenHeightFraction(root, tablePos, camera);
-  if (fraction < 0.001) return;
-  root.scale.multiplyScalar(targetFraction / fraction);
+  const box = new THREE.Box3().setFromObject(root);
+  const left = new THREE.Vector3(tablePos[0] + box.min.x, tablePos[1], tablePos[2]);
+  const right = new THREE.Vector3(tablePos[0] + box.max.x, tablePos[1], tablePos[2]);
+  left.project(camera);
+  right.project(camera);
+  return Math.abs(right.x - left.x) / 2;
+}
+
+function scaleTableToFitViewport(
+  root: THREE.Object3D,
+  tablePos: [number, number, number],
+  camera: THREE.Camera,
+  targetHeightFraction: number,
+  maxWidthFraction: number,
+) {
+  const heightFraction = measureTableScreenHeightFraction(root, tablePos, camera);
+  if (heightFraction > 0.001) {
+    root.scale.multiplyScalar(targetHeightFraction / heightFraction);
+    root.updateMatrixWorld(true);
+    const fitted = new THREE.Box3().setFromObject(root);
+    root.position.y -= fitted.min.y;
+  }
+
+  const widthFraction = measureTableScreenWidthFraction(root, tablePos, camera);
+  if (widthFraction > maxWidthFraction) {
+    root.scale.multiplyScalar(maxWidthFraction / widthFraction);
+    root.updateMatrixWorld(true);
+    const fitted = new THREE.Box3().setFromObject(root);
+    root.position.y -= fitted.min.y;
+  }
+
   root.updateMatrixWorld(true);
-  const fitted = new THREE.Box3().setFromObject(root);
-  root.position.y -= fitted.min.y;
+  const box = new THREE.Box3().setFromObject(root);
+  root.position.x -= (tablePos[0] + (box.min.x + box.max.x) / 2);
 }
 
 function fitModelToSize(root: THREE.Object3D, targetSize: number) {
@@ -470,15 +495,21 @@ const ProductModel = memo(function ProductModel({
   );
 });
 
-function TableProducts({ surfaceY }: { surfaceY: number }) {
+function TableProducts({
+  surfaceY,
+  tableTopWidth,
+}: {
+  surfaceY: number;
+  tableTopWidth: number;
+}) {
   const { size } = useThree();
   const displaySize = useMemo(
-    () => getProductDisplaySize(size.width, size.height),
-    [size.width, size.height],
+    () => getProductDisplaySize(size.width, size.height, tableTopWidth),
+    [size.width, size.height, tableTopWidth],
   );
   const layout = useMemo(
-    () => getProductRowLayout(surfaceY, size.width, size.height, displaySize),
-    [surfaceY, size.width, size.height, displaySize],
+    () => getProductRowLayout(surfaceY, size.width, size.height, displaySize, tableTopWidth),
+    [surfaceY, size.width, size.height, displaySize, tableTopWidth],
   );
   const [visibleCount, setVisibleCount] = useState(1);
 
@@ -547,9 +578,11 @@ function ResponsiveCamera() {
 function TableModel({
   onReady,
   onSurfaceY,
+  onTableMetrics,
 }: {
   onReady: () => void;
   onSurfaceY: (y: number) => void;
+  onTableMetrics: (metrics: { topWidth: number }) => void;
 }) {
   const tableUrl = useMemo(() => getTableModelUrl(), []);
   const { scene: tableRoot } = useGLTF(tableUrl, false, false, extendGltfLoader);
@@ -566,7 +599,13 @@ function TableModel({
     if (camera instanceof THREE.PerspectiveCamera) {
       const centerY = getTableCenterY(tableRoot, tablePos);
       resolveTableViewOffsetY(camera, size.width, size.height, tablePos, centerY);
-      scaleTableToScreenBand(tableRoot, tablePos, camera, TABLE_HEIGHT_FRACTION);
+      scaleTableToFitViewport(
+        tableRoot,
+        tablePos,
+        camera,
+        TABLE_HEIGHT_FRACTION,
+        TABLE_MAX_WIDTH_FRACTION,
+      );
       resolveTableViewOffsetY(
         camera,
         size.width,
@@ -579,12 +618,13 @@ function TableModel({
     const box = new THREE.Box3().setFromObject(tableRoot);
     const surfaceInset = size.width < 768 ? 0.006 : 0.004;
     onSurfaceY(tablePos[1] + box.max.y - surfaceInset);
+    onTableMetrics({ topWidth: box.max.x - box.min.x });
 
     if (!readyRef.current) {
       readyRef.current = true;
       onReady();
     }
-  }, [tableRoot, targetScale, tablePos, size.width, size.height, camera, onReady, onSurfaceY]);
+  }, [tableRoot, targetScale, tablePos, size.width, size.height, camera, onReady, onSurfaceY, onTableMetrics]);
 
   return (
     <group ref={groupRef} position={tablePos}>
@@ -601,7 +641,12 @@ function TableScene({
   showProducts: boolean;
 }) {
   const [surfaceY, setSurfaceY] = useState<number | null>(null);
+  const [tableTopWidth, setTableTopWidth] = useState<number | null>(null);
   const handleSurfaceY = useCallback((y: number) => setSurfaceY(y), []);
+  const handleTableMetrics = useCallback(
+    (metrics: { topWidth: number }) => setTableTopWidth(metrics.topWidth),
+    [],
+  );
   const { size } = useThree();
   const target = getTableTarget(size.width);
   const shadow = getTableShadow(size.width);
@@ -646,7 +691,7 @@ function TableScene({
       <pointLight position={[0, 0.8, 0.9]} intensity={0.55} color="#F5E0C0" distance={6} />
       <pointLight position={[0.5, 0.6, 1.4]} intensity={0.3} color="#FAECC8" distance={5} />
 
-      <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} />
+      <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} onTableMetrics={handleTableMetrics} />
 
       {surfaceY !== null && (
         <pointLight
@@ -657,7 +702,9 @@ function TableScene({
         />
       )}
 
-      {surfaceY !== null && showProducts && <TableProducts surfaceY={surfaceY} />}
+      {surfaceY !== null && tableTopWidth !== null && showProducts && (
+        <TableProducts surfaceY={surfaceY} tableTopWidth={tableTopWidth} />
+      )}
 
       <ContactShadows
         position={[0, shadow.groundY, 0.52]}
