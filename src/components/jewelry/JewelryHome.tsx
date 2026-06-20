@@ -96,7 +96,7 @@ function applyTableMaterials(root: THREE.Object3D) {
         mat.color.set("#FFFEF9");
         if ("metalness" in mat) mat.metalness = 0.05;
         if ("roughness" in mat) mat.roughness = 0.04;
-        if ("envMapIntensity" in mat) mat.envMapIntensity = 0.7;
+        if ("envMapIntensity" in mat) mat.envMapIntensity = 0.35;
         return;
       }
 
@@ -104,13 +104,14 @@ function applyTableMaterials(root: THREE.Object3D) {
 
       const isLeg = name.includes("leg") || name.includes("base") || name.includes("bottom");
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
+      mat.color.offsetHSL(0, -0.03, -0.05);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
         mat.emissive.set("#000000");
       }
-      if ("metalness" in mat) mat.metalness = isLeg ? 0.05 : 0.03;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.58 : 0.52;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.1;
+      if ("metalness" in mat) mat.metalness = isLeg ? 0.03 : 0.015;
+      if ("roughness" in mat) mat.roughness = isLeg ? 0.78 : 0.72;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.03;
     });
   });
 }
@@ -629,13 +630,13 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.72 : 0.66} color="#FFF9F2" />
-      <hemisphereLight args={["#FFFDF8", TABLE_COLOR, mobile ? 0.62 : 0.55]} />
+      <ambientLight intensity={mobile ? 0.58 : 0.54} color="#FFF6EE" />
+      <hemisphereLight args={["#FFF8F0", "#8A6840", mobile ? 0.38 : 0.34]} />
 
       <directionalLight
         position={[0.2, 4.8, 2.8]}
-        intensity={mobile ? 1.05 : 1.15}
-        color="#FFF8EE"
+        intensity={mobile ? 0.82 : 0.9}
+        color="#FFF3E8"
         castShadow={!mobile}
         shadow-mapSize={[512, 512]}
         shadow-camera-far={10}
@@ -646,18 +647,18 @@ function TableScene({
         shadow-bias={-0.0001}
       />
 
-      <spotLight position={[0, 2.8, 1.2]} angle={0.5} penumbra={0.9} intensity={1.35} color="#FFF6E8" distance={12} />
-      <pointLight position={[0, 0.8, 0.9]} intensity={0.55} color="#F5E0C0" distance={6} />
-      <pointLight position={[0.5, 0.6, 1.4]} intensity={0.3} color="#FAECC8" distance={5} />
+      <spotLight position={[0, 2.8, 1.2]} angle={0.5} penumbra={0.9} intensity={0.95} color="#FFF0E4" distance={12} />
+      <pointLight position={[0, 0.8, 0.9]} intensity={0.28} color="#E8D0B0" distance={6} />
+      <pointLight position={[0.5, 0.6, 1.4]} intensity={0.18} color="#E6D4B8" distance={5} />
 
       <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} onTableMetrics={handleTableMetrics} />
 
       {surfaceY !== null && (
         <pointLight
           position={[0, surfaceY + 0.06, 0.62]}
-          intensity={0.82}
-          color="#FFF9EE"
-          distance={3.6}
+          intensity={0.32}
+          color="#F0E4D4"
+          distance={3.2}
         />
       )}
 
@@ -726,7 +727,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
           gl.shadowMap.enabled = !mobile;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = mobile ? 1.1 : 1.08;
+          gl.toneMappingExposure = mobile ? 0.98 : 0.96;
           gl.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >
