@@ -31,9 +31,9 @@ export function getProductDisplaySize(
   tableTopWidth?: number,
 ): number {
   if (tableTopWidth && tableTopWidth > 0) {
-    const fromTable = tableTopWidth * 0.098;
-    const min = viewportWidth < 768 ? 0.055 : 0.05;
-    const max = viewportWidth < 768 ? 0.108 : 0.112;
+    const fromTable = tableTopWidth * 0.108;
+    const min = viewportWidth < 768 ? 0.058 : 0.054;
+    const max = viewportWidth < 768 ? 0.118 : 0.122;
     return clampRange(fromTable, min, max);
   }
 
@@ -76,7 +76,7 @@ export function getProductRowLayout(
   const models = getProductModelUrls();
   const count = models.length;
   const tablePos = getTablePosition(viewportWidth);
-  const rowSpan = tableTopWidth && tableTopWidth > 0 ? tableTopWidth * 0.6 : displaySize * 3.2;
+  const rowSpan = tableTopWidth && tableTopWidth > 0 ? tableTopWidth * 0.82 : displaySize * 3.8;
   const spacing = count > 1 ? rowSpan / (count - 1) : 0;
   const totalWidth = spacing * (count - 1);
   const forwardZ = tablePos[2] + (mobile ? 0.038 : 0.044);

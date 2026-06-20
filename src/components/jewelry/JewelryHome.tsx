@@ -32,13 +32,13 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Size only — placement unchanged */
-const TABLE_HEIGHT_FRACTION = 0.205;
-const TABLE_MAX_WIDTH_FRACTION = 0.66;
-const TABLE_CENTER_NDC_TARGET = -0.14;
+/** Table size + placement */
+const TABLE_HEIGHT_FRACTION = 0.218;
+const TABLE_MAX_WIDTH_FRACTION = 0.68;
+const TABLE_CENTER_NDC_TARGET = -0.18;
 const PRODUCT_STAGGER_MS = 220;
-const HOVER_LIFT = 0.038;
-const HOVER_SCALE = 1.1;
+const HOVER_LIFT = 0.044;
+const HOVER_SCALE = 1.12;
 
 function getTableCenterY(root: THREE.Object3D, tablePos: [number, number, number]) {
   const box = new THREE.Box3().setFromObject(root);
@@ -106,11 +106,11 @@ function applyTableMaterials(root: THREE.Object3D) {
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#000000");
+        mat.emissive.set("#FFF6E8").multiplyScalar(isLeg ? 0.012 : 0.018);
       }
-      if ("metalness" in mat) mat.metalness = 0;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.88 : 0.85;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0;
+      if ("metalness" in mat) mat.metalness = isLeg ? 0.02 : 0.015;
+      if ("roughness" in mat) mat.roughness = isLeg ? 0.76 : 0.72;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.06;
     });
   });
 }
@@ -232,17 +232,17 @@ function setupProductShadows(root: THREE.Object3D) {
     mats.forEach((mat) => {
       if ("transparent" in mat && mat.transparent) return;
       if ("metalness" in mat && typeof mat.metalness === "number") {
-        mat.metalness = Math.min(mat.metalness, 0.35);
+        mat.metalness = THREE.MathUtils.clamp(mat.metalness, 0.08, 0.55);
       }
       if ("roughness" in mat && typeof mat.roughness === "number") {
-        mat.roughness = Math.max(mat.roughness, 0.55);
+        mat.roughness = THREE.MathUtils.clamp(mat.roughness, 0.38, 0.72);
       }
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.12;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.2;
     });
   });
 }
 
-const GLITTER_COUNT = 28;
+const GLITTER_COUNT = 38;
 
 interface ProductBounds {
   radius: number;
@@ -302,7 +302,7 @@ function ProductGlitter({
 
     const pos = points.geometry.attributes.position as THREE.BufferAttribute;
     const arr = pos.array as Float32Array;
-    const spawnRate = intensityRef.current * delta * 22;
+    const spawnRate = intensityRef.current * delta * 26;
 
     for (let i = 0; i < GLITTER_COUNT; i++) {
       const p = particles.current[i];
@@ -345,10 +345,10 @@ function ProductGlitter({
   return (
     <points ref={pointsRef} geometry={geometry} frustumCulled={false}>
       <pointsMaterial
-        size={0.02}
-        color="#FFF8E6"
+        size={0.022}
+        color="#FFF6DC"
         transparent
-        opacity={0.95}
+        opacity={0.88}
         depthWrite={false}
         blending={THREE.AdditiveBlending}
         sizeAttenuation
@@ -394,16 +394,17 @@ const ProductModel = memo(function ProductModel({
 
   useFrame((_, delta) => {
     const target = hovered ? 1 : 0;
-    hoverRef.current = THREE.MathUtils.lerp(hoverRef.current, target, Math.min(1, delta * 11));
+    hoverRef.current = THREE.MathUtils.lerp(hoverRef.current, target, Math.min(1, delta * 13));
     const t = hoverRef.current;
+    const ease = t * t * (3 - 2 * t);
 
     if (!groupRef.current) return;
-    groupRef.current.position.set(position[0], position[1] + t * HOVER_LIFT, position[2]);
-    groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2]);
-    groupRef.current.scale.setScalar(1 + t * (HOVER_SCALE - 1));
+    groupRef.current.position.set(position[0], position[1] + ease * HOVER_LIFT, position[2]);
+    groupRef.current.rotation.set(rotation[0], rotation[1] + ease * 0.05, rotation[2]);
+    groupRef.current.scale.setScalar(1 + ease * (HOVER_SCALE - 1));
 
     if (glowRef.current) {
-      glowRef.current.intensity = t * 1.65;
+      glowRef.current.intensity = ease * 1.15;
     }
   });
 
@@ -451,8 +452,8 @@ const ProductModel = memo(function ProductModel({
         ref={glowRef}
         position={[0, bounds.height * 0.55, 0]}
         intensity={0}
-        color="#FFF4D6"
-        distance={displaySize * 5}
+        color="#FFF0D8"
+        distance={displaySize * 4.2}
       />
     </group>
   );
@@ -490,6 +491,12 @@ function TableProducts({
 
   return (
     <group>
+      <pointLight
+        position={[0, surfaceY + 0.14, 0.48]}
+        intensity={0.32}
+        color="#FFF6EC"
+        distance={4.2}
+      />
       {visibleLayout.map((item) => (
         <Suspense key={item.url} fallback={null}>
           <ProductModel
@@ -619,13 +626,13 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.42 : 0.38} color="#FFF4EA" />
-      <hemisphereLight args={["#FFF6EE", "#6E5234", mobile ? 0.22 : 0.2]} />
+      <ambientLight intensity={mobile ? 0.48 : 0.44} color="#FFF6EE" />
+      <hemisphereLight args={["#FFFAF4", "#7A5E3E", mobile ? 0.28 : 0.26]} />
 
       <directionalLight
         position={[0.2, 4.8, 2.8]}
-        intensity={mobile ? 0.58 : 0.62}
-        color="#FFF0E6"
+        intensity={mobile ? 0.72 : 0.76}
+        color="#FFF4EA"
         castShadow={!mobile}
         shadow-mapSize={[512, 512]}
         shadow-camera-far={10}
@@ -703,7 +710,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
           gl.shadowMap.enabled = !mobile;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = mobile ? 0.9 : 0.88;
+          gl.toneMappingExposure = mobile ? 0.96 : 0.94;
           gl.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >
