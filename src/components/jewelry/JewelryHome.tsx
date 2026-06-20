@@ -4,7 +4,6 @@ import { Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
   ContactShadows,
-  Environment,
   OrbitControls,
   PerspectiveCamera,
   useCursor,
@@ -30,10 +29,10 @@ interface JewelryHomeProps {
   visible: boolean;
 }
 
-const GOLD_MAIN = new THREE.Color("#E3BD9B");
-const GOLD_LIGHT = new THREE.Color("#EDD0B5");
-const GOLD_SHADE = new THREE.Color("#CFA882");
-const GOLD_WARM = new THREE.Color("#E8C89A");
+const GOLD_MAIN = new THREE.Color("#E3B485");
+const GOLD_LIGHT = new THREE.Color("#EDD4B8");
+const GOLD_SHADE = new THREE.Color("#C99E6E");
+const GOLD_WARM = new THREE.Color("#E8C090");
 
 function applyTableMaterials(root: THREE.Object3D) {
   root.traverse((child) => {
@@ -127,9 +126,9 @@ function enhanceProductMaterials(root: THREE.Object3D) {
   });
 }
 
-const HOVER_LIFT = 0.042;
-const HOVER_SCALE = 1.06;
-const GLITTER_COUNT = 34;
+const HOVER_LIFT = 0.048;
+const HOVER_SCALE = 1.08;
+const GLITTER_COUNT = 16;
 
 interface ProductBounds {
   radius: number;
@@ -265,8 +264,7 @@ const ProductModel = memo(function ProductModel({
     radius: displaySize * 0.35,
     height: displaySize * 0.5,
   });
-  const { scene: modelScene } = useGLTF(url, false, false, extendGltfLoader);
-  const productRoot = useMemo(() => modelScene.clone(true), [modelScene]);
+  const { scene: productRoot } = useGLTF(url, false, false, extendGltfLoader);
 
   useLayoutEffect(() => {
     fitProductToSize(productRoot, displaySize);
@@ -359,12 +357,6 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
   );
 
   useEffect(() => {
-    layout.slice(0, visibleCount).forEach((item) =>
-      useGLTF.preload(item.url, false, false, extendGltfLoader),
-    );
-  }, [layout, visibleCount]);
-
-  useEffect(() => {
     if (visibleCount >= layout.length) return;
     const id = window.setTimeout(() => setVisibleCount((count) => count + 1), 320);
     return () => window.clearTimeout(id);
@@ -436,16 +428,17 @@ function TableModel({
   onSurfaceY: (y: number) => void;
 }) {
   const tableUrl = useMemo(() => getTableModelUrl(), []);
-  const { scene } = useGLTF(tableUrl, false, false, extendGltfLoader);
+  const { scene: tableRoot } = useGLTF(tableUrl, false, false, extendGltfLoader);
   const groupRef = useRef<THREE.Group>(null);
   const { size } = useThree();
   const targetScale = getTableScale(size.width, size.height);
   const tablePos = getTablePosition(size.width);
   const readyRef = useRef(false);
-
-  const tableRoot = useMemo(() => scene.clone(true), [scene]);
+  const fittedRef = useRef(false);
 
   useLayoutEffect(() => {
+    if (fittedRef.current) return;
+    fittedRef.current = true;
     fitModelToSize(tableRoot, targetScale);
     applyTableMaterials(tableRoot);
 
@@ -530,10 +523,6 @@ function TableScene({
         far={2}
         color="#2A2018"
       />
-
-      <Suspense fallback={null}>
-        <Environment preset="studio" background={false} environmentIntensity={0.75} />
-      </Suspense>
     </>
   );
 }
@@ -557,11 +546,6 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
     window.addEventListener("resize", sync);
     return () => window.removeEventListener("resize", sync);
   }, []);
-
-  useEffect(() => {
-    if (!visible) return;
-    useGLTF.preload(getTableModelUrl(), false, false, extendGltfLoader);
-  }, [visible]);
 
   return (
     <div
