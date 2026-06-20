@@ -32,9 +32,9 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Medium table — slightly lower on screen */
-const TABLE_HEIGHT_FRACTION = 0.145;
-const TABLE_MAX_WIDTH_FRACTION = 0.54;
+/** Size only — placement unchanged */
+const TABLE_HEIGHT_FRACTION = 0.162;
+const TABLE_MAX_WIDTH_FRACTION = 0.58;
 const TABLE_CENTER_NDC_TARGET = -0.14;
 const PRODUCT_STAGGER_MS = 220;
 const HOVER_LIFT = 0.038;
@@ -104,15 +104,13 @@ function applyTableMaterials(root: THREE.Object3D) {
 
       const isLeg = name.includes("leg") || name.includes("base") || name.includes("bottom");
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
-      mat.color.lerp(new THREE.Color(colors.roseGoldLight), isLeg ? 0.2 : 0.14);
-      mat.color.lerp(new THREE.Color(colors.goldLight), isLeg ? 0.1 : 0.16);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#FFF4E8").multiplyScalar(isLeg ? 0.035 : 0.05);
+        mat.emissive.set("#000000");
       }
-      if ("metalness" in mat) mat.metalness = isLeg ? 0.04 : 0.025;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.62 : 0.48;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.18;
+      if ("metalness" in mat) mat.metalness = isLeg ? 0.05 : 0.03;
+      if ("roughness" in mat) mat.roughness = isLeg ? 0.58 : 0.52;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.1;
     });
   });
 }
@@ -223,59 +221,12 @@ function fitProductToUniformSize(root: THREE.Object3D, targetHeight: number) {
   root.position.set(-center.x, -fitted.min.y, -center.z);
 }
 
-function enhanceProductMaterials(root: THREE.Object3D) {
+function setupProductShadows(root: THREE.Object3D) {
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
-    if (!mesh.isMesh || !mesh.material) return;
+    if (!mesh.isMesh) return;
     mesh.castShadow = true;
     mesh.receiveShadow = false;
-
-    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    mats.forEach((mat) => {
-      const name = (mesh.name + (mat.name || "")).toLowerCase();
-      const isGem =
-        name.includes("gem") ||
-        name.includes("stone") ||
-        name.includes("diamond") ||
-        name.includes("crystal");
-      const isMetal =
-        name.includes("gold") ||
-        name.includes("metal") ||
-        name.includes("ring") ||
-        name.includes("chain") ||
-        ("metalness" in mat && typeof mat.metalness === "number" && mat.metalness > 0.45);
-
-      if ("envMapIntensity" in mat) {
-        mat.envMapIntensity = isGem ? 2 : isMetal ? 1.7 : 1.35;
-      }
-
-      if ("metalness" in mat && typeof mat.metalness === "number") {
-        if (isGem) mat.metalness = Math.min(mat.metalness, 0.12);
-        else if (isMetal) mat.metalness = Math.min(1, Math.max(mat.metalness, 0.75));
-        else mat.metalness = Math.min(1, mat.metalness + 0.05);
-      }
-
-      if ("roughness" in mat && typeof mat.roughness === "number") {
-        if (isGem) mat.roughness = Math.max(0.05, Math.min(mat.roughness, 0.12));
-        else if (isMetal) mat.roughness = Math.max(0.12, Math.min(mat.roughness * 0.7, 0.26));
-        else mat.roughness = Math.max(0.15, mat.roughness * 0.88);
-      }
-
-      if ("color" in mat && mat.color instanceof THREE.Color) {
-        if (isMetal) {
-          mat.color.lerp(new THREE.Color(colors.gold), 0.12);
-          mat.color.offsetHSL(0, 0.04, 0.05);
-        } else if (isGem) {
-          mat.color.offsetHSL(0, 0.1, 0.08);
-        } else {
-          mat.color.offsetHSL(0.01, 0.05, 0.04);
-        }
-      }
-
-      if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#FFF5E0").multiplyScalar(isGem ? 0.05 : 0.025);
-      }
-    });
   });
 }
 
@@ -419,7 +370,7 @@ const ProductModel = memo(function ProductModel({
 
   useLayoutEffect(() => {
     fitProductToUniformSize(productRoot, displaySize);
-    enhanceProductMaterials(productRoot);
+    setupProductShadows(productRoot);
 
     const box = new THREE.Box3().setFromObject(productRoot);
     const size = box.getSize(new THREE.Vector3());

@@ -18,10 +18,10 @@ export function getProductTargetPixels(
   viewportHeight = viewportWidth,
 ): number {
   if (viewportWidth < 768) {
-    return viewportHeight < 360 ? 82 : 92;
+    return viewportHeight < 360 ? 88 : 98;
   }
-  if (viewportWidth < 1024) return 102;
-  return 112;
+  if (viewportWidth < 1024) return 108;
+  return 118;
 }
 
 /** Product height in world units — proportional to table top width when known */
@@ -31,9 +31,9 @@ export function getProductDisplaySize(
   tableTopWidth?: number,
 ): number {
   if (tableTopWidth && tableTopWidth > 0) {
-    const fromTable = tableTopWidth * 0.072;
-    const min = viewportWidth < 768 ? 0.042 : 0.038;
-    const max = viewportWidth < 768 ? 0.085 : 0.09;
+    const fromTable = tableTopWidth * 0.084;
+    const min = viewportWidth < 768 ? 0.048 : 0.044;
+    const max = viewportWidth < 768 ? 0.095 : 0.1;
     return clampRange(fromTable, min, max);
   }
 
@@ -48,7 +48,7 @@ export function getProductDisplaySize(
   );
 
   const worldSize = worldSizeFromPixels(targetPixels, viewportHeight, cam.fov, distance);
-  const maxWorld = viewportWidth < 768 ? 0.1 : viewportWidth < 1024 ? 0.095 : 0.09;
+  const maxWorld = viewportWidth < 768 ? 0.108 : viewportWidth < 1024 ? 0.102 : 0.098;
 
   return Math.min(worldSize, maxWorld);
 }
