@@ -3,7 +3,6 @@
 import { Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
-  ContactShadows,
   OrbitControls,
   PerspectiveCamera,
   useCursor,
@@ -15,7 +14,6 @@ import {
   getTableCamera,
   getTablePosition,
   getTableScale,
-  getTableShadow,
   getTableTarget,
 } from "@/lib/tableDisplay";
 import {
@@ -24,7 +22,8 @@ import {
 } from "@/lib/productDisplay";
 import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
 import { colors } from "@/lib/colors";
-import { preloadNextProductModel } from "@/lib/modelPreload";
+import { optimizeModelForGpu } from "@/lib/gpuModelOptimize";
+import { prefetchNextProductBytes } from "@/lib/modelPreload";
 
 interface JewelryHomeProps {
   visible: boolean;
@@ -36,7 +35,8 @@ const TABLE_LEG_COLOR = colors.tableLeg;
 const TABLE_HEIGHT_FRACTION = 0.218;
 const TABLE_MAX_WIDTH_FRACTION = 0.68;
 const TABLE_CENTER_NDC_TARGET = -0.18;
-const PRODUCT_STAGGER_MS = 220;
+const PRODUCT_STAGGER_MS = 900;
+const PRODUCT_START_DELAY_MS = 700;
 const HOVER_LIFT = 0.044;
 const HOVER_SCALE = 1.12;
 
@@ -81,8 +81,8 @@ function applyTableMaterials(root: THREE.Object3D) {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh || !mesh.material) return;
 
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
 
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     mats.forEach((mat) => {
@@ -226,7 +226,7 @@ function setupProductMaterials(root: THREE.Object3D) {
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh || !mesh.material) return;
-    mesh.castShadow = true;
+    mesh.castShadow = false;
     mesh.receiveShadow = false;
 
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
@@ -269,7 +269,7 @@ function setupProductMaterials(root: THREE.Object3D) {
   });
 }
 
-const GLITTER_COUNT = 38;
+const GLITTER_COUNT = 22;
 
 interface ProductBounds {
   radius: number;
@@ -409,6 +409,7 @@ const ProductModel = memo(function ProductModel({
   useLayoutEffect(() => {
     fitProductToUniformSize(productRoot, displaySize);
     setupProductMaterials(productRoot);
+    optimizeModelForGpu(productRoot);
 
     const box = new THREE.Box3().setFromObject(productRoot);
     const size = box.getSize(new THREE.Vector3());
@@ -493,7 +494,7 @@ function TableProducts({
 
   useEffect(() => {
     if (visibleCount >= layout.length) return;
-    preloadNextProductModel(visibleCount);
+    prefetchNextProductBytes(visibleCount);
     const id = window.setTimeout(() => setVisibleCount((count) => count + 1), PRODUCT_STAGGER_MS);
     return () => window.clearTimeout(id);
   }, [visibleCount, layout.length]);
@@ -559,6 +560,7 @@ function TableModel({
   useLayoutEffect(() => {
     fitTableToSize(tableRoot, targetScale);
     applyTableMaterials(tableRoot);
+    optimizeModelForGpu(tableRoot);
 
     if (camera instanceof THREE.PerspectiveCamera) {
       const centerY = getTableCenterY(tableRoot, tablePos);
@@ -606,6 +608,7 @@ function TableScene({
 }) {
   const [surfaceY, setSurfaceY] = useState<number | null>(null);
   const [tableTopWidth, setTableTopWidth] = useState<number | null>(null);
+  const [productsReady, setProductsReady] = useState(false);
   const handleSurfaceY = useCallback((y: number) => setSurfaceY(y), []);
   const handleTableMetrics = useCallback(
     (metrics: { topWidth: number }) => setTableTopWidth(metrics.topWidth),
@@ -613,8 +616,16 @@ function TableScene({
   );
   const { size } = useThree();
   const target = getTableTarget(size.width);
-  const shadow = getTableShadow(size.width);
   const mobile = size.width < 768;
+
+  useEffect(() => {
+    if (!showProducts) {
+      setProductsReady(false);
+      return;
+    }
+    const id = window.setTimeout(() => setProductsReady(true), PRODUCT_START_DELAY_MS);
+    return () => window.clearTimeout(id);
+  }, [showProducts]);
 
   return (
     <>
@@ -641,14 +652,6 @@ function TableScene({
         position={[0.15, 5.2, 2.6]}
         intensity={mobile ? 0.82 : 0.86}
         color="#FFFAF5"
-        castShadow={!mobile}
-        shadow-mapSize={[512, 512]}
-        shadow-camera-far={10}
-        shadow-camera-left={-1.8}
-        shadow-camera-right={1.8}
-        shadow-camera-top={1.8}
-        shadow-camera-bottom={-1.8}
-        shadow-bias={-0.0001}
       />
 
       <directionalLight
@@ -670,18 +673,9 @@ function TableScene({
         />
       )}
 
-      {surfaceY !== null && tableTopWidth !== null && showProducts && (
+      {surfaceY !== null && tableTopWidth !== null && productsReady && (
         <TableProducts surfaceY={surfaceY} tableTopWidth={tableTopWidth} />
       )}
-
-      <ContactShadows
-        position={[0, shadow.groundY, 0.52]}
-        opacity={shadow.opacity}
-        scale={shadow.scale}
-        blur={shadow.blur}
-        far={2}
-        color="#2A2018"
-      />
     </>
   );
 }
@@ -733,20 +727,19 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
       )}
 
       <Canvas
-        shadows={!mobile}
-        dpr={mobile ? [1, 1.2] : [1, 1.08]}
+        shadows={false}
+        dpr={1}
         className="h-full w-full"
         gl={{
-          antialias: !mobile,
+          antialias: false,
           alpha: true,
-          powerPreference: "high-performance",
+          powerPreference: "default",
           stencil: false,
           depth: true,
         }}
         onCreated={({ gl }) => {
           gl.setClearColor(0x000000, 0);
-          gl.shadowMap.enabled = !mobile;
-          gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          gl.shadowMap.enabled = false;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = mobile ? 1.06 : 1.04;
           gl.domElement.addEventListener(
