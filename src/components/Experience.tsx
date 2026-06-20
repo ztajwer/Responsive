@@ -18,6 +18,7 @@ import {
   stopBoutiqueAudio,
 } from "@/lib/boutiqueAudio";
 import { warmShopExperienceModule } from "@/lib/modelPreload";
+import { getDeviceProfile, getShopCanvasDelayMs } from "@/lib/deviceProfile";
 import { useScrollDoorProgress } from "@/hooks/useScrollDoorProgress";
 
 const ShopExperience = dynamic(() => import("./jewelry/ShopExperience"), {
@@ -29,6 +30,7 @@ function ExperienceInner() {
   const [ready, setReady] = useState(false);
   const [shopCanvasReady, setShopCanvasReady] = useState(false);
   const [scrollModalOpen, setScrollModalOpen] = useState(false);
+  const [showCursorGlitter, setShowCursorGlitter] = useState(false);
   const {
     scrollRef,
     progressRef,
@@ -81,6 +83,10 @@ function ExperienceInner() {
   }, [scrollModalOpen, onDoorScreen, scrollRef, closeScrollModal]);
 
   useEffect(() => {
+    setShowCursorGlitter(!getDeviceProfile().lowEnd);
+  }, []);
+
+  useEffect(() => {
     if (!ready) return;
     preloadBoutiqueAudio();
     warmShopExperienceModule();
@@ -95,7 +101,8 @@ function ExperienceInner() {
       setShopCanvasReady(false);
       return;
     }
-    const id = window.setTimeout(() => setShopCanvasReady(true), 800);
+    const delay = getShopCanvasDelayMs(getDeviceProfile());
+    const id = window.setTimeout(() => setShopCanvasReady(true), delay);
     return () => window.clearTimeout(id);
   }, [entered]);
 
@@ -137,7 +144,7 @@ function ExperienceInner() {
   return (
     <div className="relative h-full w-full bg-maj-cream">
       <ModelPreloader doorsReady={ready} />
-      <CursorGlitterTrail />
+      {!showCursorGlitter ? null : <CursorGlitterTrail />}
       <Loader onComplete={handleLoadComplete} />
 
       {ready && (

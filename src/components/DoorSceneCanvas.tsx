@@ -51,14 +51,13 @@ export default function DoorSceneCanvas({
       }}
     >
       <Canvas
-        shadows
-        dpr={isDesktop ? [1, 1.5] : [1, 2]}
-        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        shadows={false}
+        dpr={1}
+        gl={{ antialias: false, alpha: true, powerPreference: "default" }}
         style={{ width: "100%", height: "100%" }}
         onCreated={({ gl }) => {
           gl.setClearColor(0x000000, 0);
-          gl.shadowMap.enabled = true;
-          gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          gl.shadowMap.enabled = false;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.14;
         }}
