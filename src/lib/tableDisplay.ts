@@ -12,14 +12,14 @@ export const TABLE_DISPLAY = {
     desktop: [0, 0.15, 0.27] as [number, number, number],
   },
   scale: {
-    mobile: 0.8,
-    tablet: 0.54,
-    desktop: 0.5,
+    mobile: 0.66,
+    tablet: 0.44,
+    desktop: 0.4,
   },
   camera: {
-    mobile: { position: [0, 0.13, 2.02] as [number, number, number], fov: 40 },
-    tablet: { position: [0, 0.17, 3.1] as [number, number, number], fov: 33 },
-    desktop: { position: [0, 0.17, 3.2] as [number, number, number], fov: 31 },
+    mobile: { position: [0, 0.1, 2.05] as [number, number, number], fov: 40 },
+    tablet: { position: [0, 0.12, 3.05] as [number, number, number], fov: 33 },
+    desktop: { position: [0, 0.12, 3.1] as [number, number, number], fov: 31 },
   },
   shadow: {
     scale: { mobile: 2.35, tablet: 1.9, desktop: 1.7 },
@@ -27,8 +27,8 @@ export const TABLE_DISPLAY = {
     blur: { mobile: 4.8, tablet: 4.2, desktop: 3.6 },
     groundY: 0.002,
   },
-  /** Nudge within bottom canvas band (layer is already at bottom on mobile) */
-  viewOffsetY: { mobile: 0.1, tablet: 0.18, desktop: 0.12 },
+  /** Push table to bottom of canvas band */
+  viewOffsetY: { mobile: 0.24, tablet: 0.28, desktop: 0.26 },
 } as const;
 
 export type TableBreakpoint = "mobile" | "tablet" | "desktop";
