@@ -3,14 +3,14 @@ export const TABLE_POLAR_ANGLE = 1.38;
 
 export const TABLE_DISPLAY = {
   position: {
-    mobile: [0, 0, 0.34] as [number, number, number],
-    tablet: [0, 0, 0.31] as [number, number, number],
-    desktop: [0, 0, 0.3] as [number, number, number],
+    mobile: [0, 0, 0.46] as [number, number, number],
+    tablet: [0, 0, 0.42] as [number, number, number],
+    desktop: [0, 0, 0.4] as [number, number, number],
   },
   target: {
-    mobile: [0, 0.24, 0.34] as [number, number, number],
-    tablet: [0, 0.2, 0.31] as [number, number, number],
-    desktop: [0, 0.18, 0.3] as [number, number, number],
+    mobile: [0, 0.24, 0.46] as [number, number, number],
+    tablet: [0, 0.2, 0.42] as [number, number, number],
+    desktop: [0, 0.18, 0.4] as [number, number, number],
   },
   scale: {
     mobile: 0.72,
@@ -18,9 +18,9 @@ export const TABLE_DISPLAY = {
     desktop: 0.46,
   },
   camera: {
-    mobile: { position: [0, 0.44, 1.52] as [number, number, number], fov: 38 },
-    tablet: { position: [0, 0.42, 1.85] as [number, number, number], fov: 34 },
-    desktop: { position: [0, 0.4, 2.05] as [number, number, number], fov: 32 },
+    mobile: { position: [0, 0.44, 1.62] as [number, number, number], fov: 38 },
+    tablet: { position: [0, 0.42, 1.95] as [number, number, number], fov: 34 },
+    desktop: { position: [0, 0.4, 2.15] as [number, number, number], fov: 32 },
   },
   shadow: {
     scale: { mobile: 2.1, tablet: 1.7, desktop: 1.5 },

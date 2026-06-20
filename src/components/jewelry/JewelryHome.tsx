@@ -94,13 +94,36 @@ function applyTableMaterials(root: THREE.Object3D) {
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set(TABLE_COLOR).multiplyScalar(isLeg ? 0.018 : 0.03);
+        mat.emissive.set(TABLE_COLOR).multiplyScalar(0.035);
       }
-      if ("metalness" in mat) mat.metalness = isLeg ? 0.38 : 0.42;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.36 : 0.3;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.5;
+      if ("metalness" in mat) mat.metalness = 0.04;
+      if ("roughness" in mat) mat.roughness = 0.52;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.15;
     });
   });
+}
+
+function fitTableToSize(root: THREE.Object3D, targetSize: number) {
+  root.scale.set(1, 1, 1);
+  root.position.set(0, 0, 0);
+  root.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  root.position.set(-center.x, -box.min.y, -center.z);
+
+  const maxDim = Math.max(size.x, size.y, size.z);
+  if (maxDim > 0) {
+    root.scale.setScalar(targetSize / maxDim);
+  }
+
+  root.scale.x *= 1.16;
+  root.scale.z *= 1.1;
+
+  root.updateMatrixWorld(true);
+  const fitted = new THREE.Box3().setFromObject(root);
+  root.position.y -= fitted.min.y;
 }
 
 function fitModelToSize(root: THREE.Object3D, targetSize: number) {
@@ -501,7 +524,7 @@ function TableModel({
   const readyRef = useRef(false);
 
   useLayoutEffect(() => {
-    fitModelToSize(tableRoot, targetScale);
+    fitTableToSize(tableRoot, targetScale);
     applyTableMaterials(tableRoot);
 
     const box = new THREE.Box3().setFromObject(tableRoot);
@@ -553,13 +576,13 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.64 : 0.6} color="#FFF8F0" />
-      <hemisphereLight args={["#FFFCF5", TABLE_COLOR, mobile ? 0.55 : 0.48]} />
+      <ambientLight intensity={mobile ? 0.72 : 0.66} color="#FFF9F2" />
+      <hemisphereLight args={["#FFFDF8", TABLE_COLOR, mobile ? 0.62 : 0.55]} />
 
       <directionalLight
-        position={[0.4, 5.2, 2.4]}
-        intensity={mobile ? 0.92 : 1.05}
-        color="#FFF5E6"
+        position={[0.2, 4.8, 2.8]}
+        intensity={mobile ? 1.05 : 1.15}
+        color="#FFF8EE"
         castShadow={!mobile}
         shadow-mapSize={[512, 512]}
         shadow-camera-far={10}
@@ -570,16 +593,25 @@ function TableScene({
         shadow-bias={-0.0001}
       />
 
-      <spotLight position={[0, 3.6, 1.6]} angle={0.42} penumbra={0.95} intensity={1.25} color="#FFFAF0" distance={14} />
-      <pointLight position={[0, 1.2, 2.2]} intensity={0.4} color="#F5E6C8" distance={8} />
-      <pointLight position={[0.5, 0.6, 1.4]} intensity={0.35} color="#FAECC8" distance={5} />
+      <spotLight position={[0, 2.8, 1.2]} angle={0.5} penumbra={0.9} intensity={1.35} color="#FFF6E8" distance={12} />
+      <pointLight position={[0, 0.8, 0.9]} intensity={0.55} color="#F5E0C0" distance={6} />
+      <pointLight position={[0.5, 0.6, 1.4]} intensity={0.3} color="#FAECC8" distance={5} />
 
       <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} />
+
+      {surfaceY !== null && (
+        <pointLight
+          position={[0, surfaceY + 0.06, 0.54]}
+          intensity={0.78}
+          color="#FFF6EA"
+          distance={3.6}
+        />
+      )}
 
       {surfaceY !== null && showProducts && <TableProducts surfaceY={surfaceY} />}
 
       <ContactShadows
-        position={[0, shadow.groundY, 0.32]}
+        position={[0, shadow.groundY, 0.44]}
         opacity={shadow.opacity}
         scale={shadow.scale}
         blur={shadow.blur}
@@ -637,7 +669,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
           gl.shadowMap.enabled = !mobile;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = mobile ? 1.06 : 1.04;
+          gl.toneMappingExposure = mobile ? 1.1 : 1.08;
           gl.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >

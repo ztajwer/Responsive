@@ -39,7 +39,7 @@ export function getProductDisplaySize(
   );
 
   const worldSize = worldSizeFromPixels(targetPixels, viewportHeight, cam.fov, distance);
-  const maxWorld = viewportWidth < 768 ? 0.21 : viewportWidth < 1024 ? 0.2 : 0.214;
+  const maxWorld = viewportWidth < 768 ? 0.23 : viewportWidth < 1024 ? 0.22 : 0.22;
 
   return Math.min(worldSize, maxWorld);
 }
