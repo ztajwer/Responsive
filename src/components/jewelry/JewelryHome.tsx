@@ -33,8 +33,8 @@ interface JewelryHomeProps {
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
 /** Size only — placement unchanged */
-const TABLE_HEIGHT_FRACTION = 0.178;
-const TABLE_MAX_WIDTH_FRACTION = 0.62;
+const TABLE_HEIGHT_FRACTION = 0.192;
+const TABLE_MAX_WIDTH_FRACTION = 0.645;
 const TABLE_CENTER_NDC_TARGET = -0.14;
 const PRODUCT_STAGGER_MS = 220;
 const HOVER_LIFT = 0.038;
@@ -96,7 +96,7 @@ function applyTableMaterials(root: THREE.Object3D) {
         mat.color.set("#FFFEF9");
         if ("metalness" in mat) mat.metalness = 0.05;
         if ("roughness" in mat) mat.roughness = 0.04;
-        if ("envMapIntensity" in mat) mat.envMapIntensity = 0.35;
+        if ("envMapIntensity" in mat) mat.envMapIntensity = 0.12;
         return;
       }
 
@@ -104,14 +104,13 @@ function applyTableMaterials(root: THREE.Object3D) {
 
       const isLeg = name.includes("leg") || name.includes("base") || name.includes("bottom");
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
-      mat.color.offsetHSL(0, -0.03, -0.05);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
         mat.emissive.set("#000000");
       }
-      if ("metalness" in mat) mat.metalness = isLeg ? 0.03 : 0.015;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.78 : 0.72;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.03;
+      if ("metalness" in mat) mat.metalness = 0;
+      if ("roughness" in mat) mat.roughness = isLeg ? 0.88 : 0.85;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0;
     });
   });
 }
@@ -232,9 +231,13 @@ function setupProductShadows(root: THREE.Object3D) {
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     mats.forEach((mat) => {
       if ("transparent" in mat && mat.transparent) return;
-      if ("color" in mat && mat.color instanceof THREE.Color) {
-        mat.color.offsetHSL(0, 0.015, -0.055);
+      if ("metalness" in mat && typeof mat.metalness === "number") {
+        mat.metalness = Math.min(mat.metalness, 0.35);
       }
+      if ("roughness" in mat && typeof mat.roughness === "number") {
+        mat.roughness = Math.max(mat.roughness, 0.55);
+      }
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.12;
     });
   });
 }
@@ -487,20 +490,6 @@ function TableProducts({
 
   return (
     <group>
-      <pointLight
-        position={[0, surfaceY + 0.18, 0.4]}
-        intensity={0.85}
-        color="#FFF6E8"
-        distance={4.5}
-      />
-      <spotLight
-        position={[0, surfaceY + 0.35, 0.53]}
-        angle={0.55}
-        penumbra={0.85}
-        intensity={1.25}
-        color="#FFFAF5"
-        distance={5}
-      />
       {visibleLayout.map((item) => (
         <Suspense key={item.url} fallback={null}>
           <ProductModel
@@ -630,13 +619,13 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.58 : 0.54} color="#FFF6EE" />
-      <hemisphereLight args={["#FFF8F0", "#8A6840", mobile ? 0.38 : 0.34]} />
+      <ambientLight intensity={mobile ? 0.42 : 0.38} color="#FFF4EA" />
+      <hemisphereLight args={["#FFF6EE", "#6E5234", mobile ? 0.22 : 0.2]} />
 
       <directionalLight
         position={[0.2, 4.8, 2.8]}
-        intensity={mobile ? 0.82 : 0.9}
-        color="#FFF3E8"
+        intensity={mobile ? 0.58 : 0.62}
+        color="#FFF0E6"
         castShadow={!mobile}
         shadow-mapSize={[512, 512]}
         shadow-camera-far={10}
@@ -647,20 +636,7 @@ function TableScene({
         shadow-bias={-0.0001}
       />
 
-      <spotLight position={[0, 2.8, 1.2]} angle={0.5} penumbra={0.9} intensity={0.95} color="#FFF0E4" distance={12} />
-      <pointLight position={[0, 0.8, 0.9]} intensity={0.28} color="#E8D0B0" distance={6} />
-      <pointLight position={[0.5, 0.6, 1.4]} intensity={0.18} color="#E6D4B8" distance={5} />
-
       <TableModel onReady={onReady} onSurfaceY={handleSurfaceY} onTableMetrics={handleTableMetrics} />
-
-      {surfaceY !== null && (
-        <pointLight
-          position={[0, surfaceY + 0.06, 0.62]}
-          intensity={0.32}
-          color="#F0E4D4"
-          distance={3.2}
-        />
-      )}
 
       {surfaceY !== null && tableTopWidth !== null && showProducts && (
         <TableProducts surfaceY={surfaceY} tableTopWidth={tableTopWidth} />
@@ -727,7 +703,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
           gl.shadowMap.enabled = !mobile;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = mobile ? 0.98 : 0.96;
+          gl.toneMappingExposure = mobile ? 0.9 : 0.88;
           gl.domElement.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >

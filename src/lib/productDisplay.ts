@@ -31,9 +31,9 @@ export function getProductDisplaySize(
   tableTopWidth?: number,
 ): number {
   if (tableTopWidth && tableTopWidth > 0) {
-    const fromTable = tableTopWidth * 0.084;
-    const min = viewportWidth < 768 ? 0.048 : 0.044;
-    const max = viewportWidth < 768 ? 0.095 : 0.1;
+    const fromTable = tableTopWidth * 0.092;
+    const min = viewportWidth < 768 ? 0.052 : 0.048;
+    const max = viewportWidth < 768 ? 0.102 : 0.108;
     return clampRange(fromTable, min, max);
   }
 
