@@ -24,7 +24,7 @@ import {
 } from "@/lib/productDisplay";
 import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
 import { colors } from "@/lib/colors";
-import { areProductModelsPreloaded, preloadProductModels } from "@/lib/modelPreload";
+import { preloadNextProductModel } from "@/lib/modelPreload";
 
 interface JewelryHomeProps {
   visible: boolean;
@@ -32,9 +32,10 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Big table, upper-center of the viewport (full-screen canvas on mobile) */
-const TABLE_HEIGHT_FRACTION = 0.3;
-const TABLE_CENTER_NDC_TARGET = 0.1;
+/** Big table, centered in the bottom canvas band */
+const TABLE_HEIGHT_FRACTION = 0.44;
+const TABLE_CENTER_NDC_TARGET = 0.08;
+const PRODUCT_STAGGER_MS = 220;
 
 function getTableCenterY(root: THREE.Object3D, tablePos: [number, number, number]) {
   const box = new THREE.Box3().setFromObject(root);
@@ -251,7 +252,8 @@ function enhanceProductMaterials(root: THREE.Object3D) {
   });
 }
 
-const PRODUCT_STAGGER_MS = 140;
+const PRODUCT_STAGGER_MS = 220;
+const HOVER_LIFT = 0.048;
 const HOVER_SCALE = 1.08;
 const GLITTER_COUNT = 16;
 

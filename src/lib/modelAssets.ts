@@ -39,10 +39,6 @@ export function getProductModelUrls(): readonly string[] {
   return PRODUCT_FILES.map((file) => getModelUrl(file));
 }
 
-export function extendGltfLoader(loader: {
-  setCrossOrigin: (mode: string) => void;
-  setRequestHeader?: (header: string, value: string) => void;
-}) {
+export function extendGltfLoader(loader: { setCrossOrigin: (mode: string) => void }) {
   loader.setCrossOrigin("anonymous");
-  loader.setRequestHeader?.("Accept", "model/gltf-binary,*/*;q=0.8");
 }

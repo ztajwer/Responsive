@@ -4,7 +4,6 @@ import { useGLTF } from "@react-three/drei";
 import { extendGltfLoader, getProductModelUrls, getTableModelUrl } from "./modelAssets";
 
 const started = new Set<string>();
-let productBatchPromise: Promise<void> | null = null;
 
 const SHOP_IMAGES = ["/background.png", "/main_mob_bg.png"] as const;
 const DOOR_IMAGES = ["/door_sm.png", "/door_bg.png"] as const;
@@ -19,17 +18,24 @@ export function preloadTableModel() {
   preloadGltf(getTableModelUrl());
 }
 
+/** Preload one product at a time to avoid loading ~400MB of GLBs at once. */
 export function preloadProductModels(): Promise<void> {
-  if (productBatchPromise) return productBatchPromise;
+  const urls = getProductModelUrls().filter((url) => !started.has(url));
+  if (urls.length === 0) return Promise.resolve();
 
-  productBatchPromise = new Promise((resolve) => {
-    for (const url of getProductModelUrls()) {
+  let chain = Promise.resolve();
+  for (const url of urls) {
+    chain = chain.then(() => {
       preloadGltf(url);
-    }
-    resolve();
-  });
+    });
+  }
+  return chain;
+}
 
-  return productBatchPromise;
+export function preloadNextProductModel(index: number) {
+  const urls = getProductModelUrls();
+  const url = urls[Math.min(Math.max(index, 0), urls.length - 1)];
+  if (url) preloadGltf(url);
 }
 
 export function preloadDoorImages() {
@@ -59,5 +65,5 @@ export function warmShopExperienceModule() {
 }
 
 export function areProductModelsPreloaded() {
-  return getProductModelUrls().every((url) => started.has(url));
+  return false;
 }

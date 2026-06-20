@@ -22,7 +22,6 @@ export default function ModelPreloader({ doorsReady }: { doorsReady: boolean }) 
     if (!doorsReady) return;
 
     scheduleIdle(() => {
-      void preloadProductModels();
       warmShopExperienceModule();
     });
   }, [doorsReady]);

@@ -93,8 +93,7 @@ function ExperienceInner() {
 
   useEffect(() => {
     if (!ready || entered) return;
-    if (doorProgress < 0.35) return;
-    void preloadProductModels();
+    if (doorProgress < 0.5) return;
     warmShopExperienceModule();
   }, [ready, entered, doorProgress]);
 
