@@ -39,7 +39,7 @@ function resolveTableViewOffsetY(
   tablePos: [number, number, number],
 ) {
   const anchor = new THREE.Vector3(0, tablePos[1], tablePos[2]);
-  let low = 0;
+  let low = -0.12;
   let high = 0.45;
 
   for (let i = 0; i < 22; i++) {
@@ -56,7 +56,11 @@ function resolveTableViewOffsetY(
     }
   }
 
-  return (low + high) / 2;
+  const offsetY = (low + high) / 2;
+  camera.setViewOffset(width, height, 0, height * offsetY, width, height);
+  camera.updateProjectionMatrix();
+
+  return offsetY;
 }
 
 function applyTableMaterials(root: THREE.Object3D) {
@@ -113,7 +117,7 @@ function applyTableMaterials(root: THREE.Object3D) {
     headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e2e4f9" },
     body: JSON.stringify({
       sessionId: "e2e4f9",
-      runId: "post-fix-v2",
+      runId: "post-fix-v3",
       hypothesisId: "A",
       location: "JewelryHome.tsx:applyTableMaterials",
       message: "table material colors applied",
@@ -424,7 +428,7 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
       headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e2e4f9" },
       body: JSON.stringify({
         sessionId: "e2e4f9",
-      runId: "post-fix-v2",
+      runId: "post-fix-v3",
       hypothesisId: "D",
         location: "JewelryHome.tsx:TableProducts",
         message: "product layout metrics",
@@ -497,7 +501,7 @@ function ResponsiveCamera({ surfaceY }: { surfaceY: number | null }) {
       headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e2e4f9" },
       body: JSON.stringify({
         sessionId: "e2e4f9",
-        runId: "post-fix-v2",
+        runId: "post-fix-v3",
         hypothesisId: "B",
         location: "JewelryHome.tsx:ResponsiveCamera",
         message: "camera view offset and table bottom screen Y",
