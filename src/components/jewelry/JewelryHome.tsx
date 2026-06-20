@@ -562,7 +562,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
 
       <Canvas
         shadows={!mobile}
-        dpr={mobile ? [1, 1.5] : [1, 1.15]}
+        dpr={mobile ? [1, 1.25] : [1, 1.1]}
         className="h-full w-full"
         gl={{
           antialias: !mobile,
