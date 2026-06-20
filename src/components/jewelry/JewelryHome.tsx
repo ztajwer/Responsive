@@ -29,7 +29,35 @@ interface JewelryHomeProps {
   visible: boolean;
 }
 
-const TABLE_COLOR = "#E3B485";
+const TABLE_COLOR = "#D9B182";
+const TABLE_BOTTOM_NDC_TARGET = -0.94;
+
+function resolveTableViewOffsetY(
+  camera: THREE.PerspectiveCamera,
+  width: number,
+  height: number,
+  tablePos: [number, number, number],
+) {
+  const anchor = new THREE.Vector3(0, tablePos[1], tablePos[2]);
+  let low = 0;
+  let high = 0.45;
+
+  for (let i = 0; i < 22; i++) {
+    const mid = (low + high) / 2;
+    camera.setViewOffset(width, height, 0, height * mid, width, height);
+    camera.updateProjectionMatrix();
+    anchor.set(0, tablePos[1], tablePos[2]);
+    anchor.project(camera);
+
+    if (anchor.y > TABLE_BOTTOM_NDC_TARGET) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+
+  return (low + high) / 2;
+}
 
 function applyTableMaterials(root: THREE.Object3D) {
   root.traverse((child) => {
@@ -58,16 +86,42 @@ function applyTableMaterials(root: THREE.Object3D) {
       if (!("color" in mat) || !(mat.color instanceof THREE.Color)) return;
 
       const isLeg = name.includes("leg") || name.includes("base") || name.includes("bottom");
-      mat.color.set(isLeg ? "#C99A6A" : TABLE_COLOR);
+      mat.color.set(TABLE_COLOR);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
         mat.emissive.set(TABLE_COLOR).multiplyScalar(isLeg ? 0.02 : 0.035);
       }
-      if ("metalness" in mat) mat.metalness = isLeg ? 0.58 : 0.64;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.28 : 0.22;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.88;
+      if ("metalness" in mat) mat.metalness = isLeg ? 0.4 : 0.45;
+      if ("roughness" in mat) mat.roughness = isLeg ? 0.34 : 0.28;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.45;
     });
   });
+  // #region agent log
+  const applied: string[] = [];
+  root.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.material) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mats.forEach((mat) => {
+      if ("color" in mat && mat.color instanceof THREE.Color) {
+        applied.push("#" + mat.color.getHexString());
+      }
+    });
+  });
+  fetch("http://127.0.0.1:7546/ingest/d5576b71-b65a-49e0-8325-492d4225924a", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e2e4f9" },
+    body: JSON.stringify({
+      sessionId: "e2e4f9",
+      runId: "post-fix-v2",
+      hypothesisId: "A",
+      location: "JewelryHome.tsx:applyTableMaterials",
+      message: "table material colors applied",
+      data: { target: TABLE_COLOR, sample: applied.slice(0, 4), count: applied.length },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 }
 
 function fitModelToSize(root: THREE.Object3D, targetSize: number) {
@@ -354,7 +408,7 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
 
   useEffect(() => {
     if (visibleCount >= layout.length) return;
-    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), 550);
+    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), 400);
     return () => window.clearTimeout(id);
   }, [visibleCount, layout.length]);
 
@@ -362,6 +416,32 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
     () => layout.slice(0, visibleCount),
     [layout, visibleCount],
   );
+
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7546/ingest/d5576b71-b65a-49e0-8325-492d4225924a", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e2e4f9" },
+      body: JSON.stringify({
+        sessionId: "e2e4f9",
+      runId: "post-fix",
+      hypothesisId: "D",
+        location: "JewelryHome.tsx:TableProducts",
+        message: "product layout metrics",
+        data: {
+          displaySize,
+          surfaceY,
+          productCount: layout.length,
+          mobile: size.width < 768,
+          viewportW: size.width,
+          viewportH: size.height,
+          targetPx: getProductTargetPixels(size.width, size.height),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [displaySize, surfaceY, layout.length, size.width, size.height]);
 
   return (
     <group>
@@ -393,7 +473,7 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
   );
 }
 
-function ResponsiveCamera() {
+function ResponsiveCamera({ surfaceY }: { surfaceY: number | null }) {
   const { size, camera } = useThree();
   const cam = getTableCamera(size.width);
   const target = getTableTarget(size.width);
@@ -406,10 +486,35 @@ function ResponsiveCamera() {
     camera.far = 100;
     camera.lookAt(...target);
 
-    const offsetY = getTableViewOffsetY(size.width, size.height);
-    camera.setViewOffset(size.width, size.height, 0, size.height * offsetY, size.width, size.height);
-    camera.updateProjectionMatrix();
-  }, [camera, size.width, size.height, cam.fov, cam.position, target]);
+    const tablePos = getTablePosition(size.width);
+    const offsetY = resolveTableViewOffsetY(camera, size.width, size.height, tablePos);
+    const offsetPx = size.height * offsetY;
+    // #region agent log
+    const tableBottomNdc = new THREE.Vector3(0, tablePos[1], tablePos[2]);
+    tableBottomNdc.project(camera);
+    fetch("http://127.0.0.1:7546/ingest/d5576b71-b65a-49e0-8325-492d4225924a", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e2e4f9" },
+      body: JSON.stringify({
+        sessionId: "e2e4f9",
+        runId: "post-fix-v2",
+        hypothesisId: "B",
+        location: "JewelryHome.tsx:ResponsiveCamera",
+        message: "camera view offset and table bottom screen Y",
+        data: {
+          offsetFrac: offsetY,
+          offsetPx,
+          screenH: size.height,
+          surfaceY,
+          tableBottomNdcY: tableBottomNdc.y,
+          tableBottomScreenPct: ((1 - tableBottomNdc.y) / 2) * 100,
+          targetNdc: TABLE_BOTTOM_NDC_TARGET,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [camera, size.width, size.height, cam.fov, cam.position, target, surfaceY]);
 
   return (
     <PerspectiveCamera makeDefault position={cam.position} fov={cam.fov} near={0.05} far={100} />
@@ -430,22 +535,20 @@ function TableModel({
   const targetScale = getTableScale(size.width, size.height);
   const tablePos = getTablePosition(size.width);
   const readyRef = useRef(false);
-  const fittedRef = useRef(false);
 
   useLayoutEffect(() => {
-    if (fittedRef.current) return;
-    fittedRef.current = true;
     fitModelToSize(tableRoot, targetScale);
     applyTableMaterials(tableRoot);
 
     const box = new THREE.Box3().setFromObject(tableRoot);
-    onSurfaceY(tablePos[1] + box.max.y);
+    const surfaceInset = size.width < 768 ? 0.006 : 0.004;
+    onSurfaceY(tablePos[1] + box.max.y - surfaceInset);
 
     if (!readyRef.current) {
       readyRef.current = true;
       onReady();
     }
-  }, [tableRoot, targetScale, tablePos, onReady, onSurfaceY]);
+  }, [tableRoot, targetScale, tablePos, size.width, onReady, onSurfaceY]);
 
   return (
     <group ref={groupRef} position={tablePos}>
@@ -470,7 +573,7 @@ function TableScene({
 
   return (
     <>
-      <ResponsiveCamera />
+      <ResponsiveCamera surfaceY={surfaceY} />
 
       <OrbitControls
         makeDefault
@@ -487,7 +590,7 @@ function TableScene({
       />
 
       <ambientLight intensity={mobile ? 0.64 : 0.6} color="#FFF8F0" />
-      <hemisphereLight args={["#FFFCF5", "#E8D0A0", mobile ? 0.55 : 0.48]} />
+      <hemisphereLight args={["#FFFCF5", "#D9B182", mobile ? 0.55 : 0.48]} />
 
       <directionalLight
         position={[0.4, 5.2, 2.4]}
