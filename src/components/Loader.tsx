@@ -31,24 +31,20 @@ export default function Loader({ onComplete }: LoaderProps) {
   useEffect(() => {
     const startedAt = Date.now();
     const progressWindow = LOADER_DURATION_MS - FADE_DURATION_MS;
-    let rafId = 0;
 
-    const tick = () => {
+    const interval = setInterval(() => {
       const elapsed = Date.now() - startedAt;
       const t = Math.min(1, elapsed / progressWindow);
       const eased = t * t * (3 - 2 * t);
       setDisplayProgress(eased * 100);
 
       if (elapsed >= LOADER_DURATION_MS) {
+        clearInterval(interval);
         finish();
-        return;
       }
+    }, 30);
 
-      rafId = requestAnimationFrame(tick);
-    };
-
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    return () => clearInterval(interval);
   }, [finish]);
 
   if (!visible) return null;
@@ -80,26 +76,15 @@ export default function Loader({ onComplete }: LoaderProps) {
           <div className="loader-logo-wrap">
             <div className="relative">
               <div className="absolute -inset-6 rounded-full bg-maj-gold/20 blur-3xl sm:-inset-10 md:-inset-12" />
-              <div className="loader-logo-size relative">
+              <div className="loader-logo-size relative overflow-hidden rounded-full border-2 border-maj-gold/45 bg-[#f8f8f8] shadow-[0_0_56px_rgba(212,175,55,0.38)] ring-2 ring-maj-gold/20">
                 <Image
-                  src="/logo_outline.png"
-                  alt=""
+                  src="/wh_logo.png"
+                  alt="MAJ Boutique"
                   fill
                   priority
                   sizes="(max-width: 640px) 72vw, (max-width: 768px) 48vw, 320px"
-                  className="loader-logo-outline object-contain"
-                  aria-hidden
+                  className="object-contain object-center p-[12%] sm:p-6"
                 />
-                <div className="loader-logo-inner overflow-hidden rounded-full bg-[#f8f8f8] shadow-[0_0_56px_rgba(212,175,55,0.38)]">
-                  <Image
-                    src="/wh_logo.png"
-                    alt="MAJ Boutique"
-                    fill
-                    priority
-                    sizes="(max-width: 640px) 52vw, (max-width: 768px) 34vw, 220px"
-                    className="object-contain object-center p-[9%] sm:p-4"
-                  />
-                </div>
               </div>
             </div>
           </div>

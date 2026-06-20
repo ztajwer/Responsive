@@ -265,18 +265,6 @@ body {
   flex-shrink: 0;
 }
 
-.loader-logo-outline {
-  z-index: 2;
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
-
-.loader-logo-inner {
-  position: absolute;
-  inset: 17%;
-  z-index: 1;
-}
-
 @media (min-width: 640px) {
   .loader-logo-size {
     width: clamp(10.5rem, min(48vw, 38dvh), 20rem);

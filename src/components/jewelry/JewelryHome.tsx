@@ -265,7 +265,7 @@ const ProductModel = memo(function ProductModel({
     radius: displaySize * 0.35,
     height: displaySize * 0.5,
   });
-  const { scene: modelScene } = useGLTF(url, undefined, undefined, extendGltfLoader);
+  const { scene: modelScene } = useGLTF(url, false, false, extendGltfLoader);
   const productRoot = useMemo(() => modelScene.clone(true), [modelScene]);
 
   useLayoutEffect(() => {
@@ -360,7 +360,7 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
 
   useEffect(() => {
     layout.slice(0, visibleCount).forEach((item) =>
-      useGLTF.preload(item.url, undefined, undefined, extendGltfLoader),
+      useGLTF.preload(item.url, false, false, extendGltfLoader),
     );
   }, [layout, visibleCount]);
 
@@ -436,7 +436,7 @@ function TableModel({
   onSurfaceY: (y: number) => void;
 }) {
   const tableUrl = useMemo(() => getTableModelUrl(), []);
-  const { scene } = useGLTF(tableUrl, undefined, undefined, extendGltfLoader);
+  const { scene } = useGLTF(tableUrl, false, false, extendGltfLoader);
   const groupRef = useRef<THREE.Group>(null);
   const { size } = useThree();
   const targetScale = getTableScale(size.width, size.height);
@@ -560,7 +560,7 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
 
   useEffect(() => {
     if (!visible) return;
-    useGLTF.preload(getTableModelUrl(), undefined, undefined, extendGltfLoader);
+    useGLTF.preload(getTableModelUrl(), false, false, extendGltfLoader);
   }, [visible]);
 
   return (

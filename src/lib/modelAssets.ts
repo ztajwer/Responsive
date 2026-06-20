@@ -4,24 +4,27 @@ import type { GLTFLoader } from "three-stdlib";
  * 3D models live in Git LFS. Vercel serves ~134-byte pointer files from /public,
  * so production loads real binaries from GitHub's LFS media CDN instead.
  */
-const DEFAULT_GLB_CDN =
+export const GLB_CDN_BASE =
   "https://media.githubusercontent.com/media/ztajwer/Responsive/main/public";
 
 const PRODUCT_FILES = ["pro1.glb", "pro2.glb", "pro3.glb", "pro4.glb", "pro5.glb"] as const;
 
-function isVercelHost(): boolean {
-  if (typeof window === "undefined") return false;
+function isLocalDevHost(): boolean {
+  if (typeof window === "undefined") {
+    return process.env.NODE_ENV !== "production";
+  }
+
   const host = window.location.hostname;
-  return host.endsWith(".vercel.app") || host.endsWith(".vercel.sh");
+  return host === "localhost" || host === "127.0.0.1";
 }
 
 function resolveGlbBase(): string {
   const configured = process.env.NEXT_PUBLIC_GLB_BASE_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
 
-  if (process.env.VERCEL === "1" || isVercelHost()) return DEFAULT_GLB_CDN;
+  if (isLocalDevHost()) return "";
 
-  return "";
+  return GLB_CDN_BASE;
 }
 
 export function getModelUrl(filename: string): string {
@@ -30,7 +33,7 @@ export function getModelUrl(filename: string): string {
   return base ? `${base}/${name}` : `/${name}`;
 }
 
-/** Resolve at call time so Vercel host detection works even without build env. */
+/** Resolve at call time so custom domains and Vercel both pick up the CDN. */
 export function getTableModelUrl(): string {
   return getModelUrl("table-3d.glb");
 }
