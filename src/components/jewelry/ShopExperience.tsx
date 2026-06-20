@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, useEffect, type ReactNode } from "react";
+import { Component, useCallback, useEffect, useState, type ReactNode } from "react";
 import { startShopModelLoads } from "@/lib/modelPreload";
 import JewelryHome from "./JewelryHome";
 
@@ -44,20 +44,34 @@ class ShopErrorBoundary extends Component<{ children: ReactNode }, { failed: boo
 }
 
 export default function ShopExperience({ visible }: ShopExperienceProps) {
+  const [hideStaticBg, setHideStaticBg] = useState(false);
+
   useEffect(() => {
     if (visible) startShopModelLoads();
+    else setHideStaticBg(false);
   }, [visible]);
+
+  const handleTableReady = useCallback(() => {
+    setHideStaticBg(true);
+  }, []);
 
   if (!visible) return null;
 
   return (
     <ShopErrorBoundary>
       <div className="shop-experience fixed inset-0 z-[40] overflow-hidden">
-        <div className="shop-experience-bg" aria-hidden>
+        <div
+          className="shop-experience-bg"
+          aria-hidden
+          style={{
+            opacity: hideStaticBg ? 0 : 1,
+            transition: "opacity 1.1s cubic-bezier(0.22, 1, 0.36, 1)",
+          }}
+        >
           <div className="shop-experience-bg__zoom" />
         </div>
 
-        <JewelryHome visible={visible} />
+        <JewelryHome visible={visible} onTableReady={handleTableReady} />
       </div>
     </ShopErrorBoundary>
   );

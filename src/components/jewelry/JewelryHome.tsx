@@ -3,6 +3,7 @@
 import { Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
+  ContactShadows,
   OrbitControls,
   PerspectiveCamera,
   useCursor,
@@ -14,6 +15,7 @@ import {
   getTableCamera,
   getTablePosition,
   getTableScale,
+  getTableShadow,
   getTableTarget,
 } from "@/lib/tableDisplay";
 import {
@@ -27,14 +29,16 @@ import { prefetchNextProductBytes } from "@/lib/modelPreload";
 
 interface JewelryHomeProps {
   visible: boolean;
+  onTableReady?: () => void;
 }
+
+const tableViewOffsetRef = { width: 0, height: 0, offsetY: 0 };
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Table size + placement */
-const TABLE_HEIGHT_FRACTION = 0.218;
-const TABLE_MAX_WIDTH_FRACTION = 0.68;
-const TABLE_CENTER_NDC_TARGET = -0.18;
+/** Medium table — center, slightly below middle */
+const TABLE_HEIGHT_FRACTION = 0.26;
+const TABLE_CENTER_NDC_TARGET = -0.12;
 const PRODUCT_STAGGER_MS = 900;
 const PRODUCT_START_DELAY_MS = 700;
 const HOVER_LIFT = 0.044;
@@ -72,6 +76,10 @@ function resolveTableViewOffsetY(
   const offsetY = (low + high) / 2;
   camera.setViewOffset(width, height, 0, height * offsetY, width, height);
   camera.updateProjectionMatrix();
+
+  tableViewOffsetRef.width = width;
+  tableViewOffsetRef.height = height;
+  tableViewOffsetRef.offsetY = offsetY;
 
   return offsetY;
 }
@@ -131,6 +139,9 @@ function fitTableToSize(root: THREE.Object3D, targetSize: number) {
     root.scale.setScalar(targetSize / maxDim);
   }
 
+  root.scale.x *= 1.06;
+  root.scale.z *= 1.04;
+
   root.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(root);
   root.position.y -= fitted.min.y;
@@ -149,45 +160,20 @@ function measureTableScreenHeightFraction(
   return Math.abs(top.y - bottom.y) / 2;
 }
 
-function measureTableScreenWidthFraction(
+function scaleTableToScreenBand(
   root: THREE.Object3D,
   tablePos: [number, number, number],
   camera: THREE.Camera,
+  targetFraction: number,
 ) {
-  const box = new THREE.Box3().setFromObject(root);
-  const left = new THREE.Vector3(tablePos[0] + box.min.x, tablePos[1], tablePos[2]);
-  const right = new THREE.Vector3(tablePos[0] + box.max.x, tablePos[1], tablePos[2]);
-  left.project(camera);
-  right.project(camera);
-  return Math.abs(right.x - left.x) / 2;
-}
+  const fraction = measureTableScreenHeightFraction(root, tablePos, camera);
+  if (fraction < 0.001) return;
 
-function scaleTableToFitViewport(
-  root: THREE.Object3D,
-  tablePos: [number, number, number],
-  camera: THREE.Camera,
-  targetHeightFraction: number,
-  maxWidthFraction: number,
-) {
-  const heightFraction = measureTableScreenHeightFraction(root, tablePos, camera);
-  if (heightFraction > 0.001) {
-    root.scale.multiplyScalar(targetHeightFraction / heightFraction);
-    root.updateMatrixWorld(true);
-    const fitted = new THREE.Box3().setFromObject(root);
-    root.position.y -= fitted.min.y;
-  }
-
-  const widthFraction = measureTableScreenWidthFraction(root, tablePos, camera);
-  if (widthFraction > maxWidthFraction) {
-    root.scale.multiplyScalar(maxWidthFraction / widthFraction);
-    root.updateMatrixWorld(true);
-    const fitted = new THREE.Box3().setFromObject(root);
-    root.position.y -= fitted.min.y;
-  }
-
+  root.scale.multiplyScalar(targetFraction / fraction);
   root.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(root);
-  root.position.x -= (tablePos[0] + (box.min.x + box.max.x) / 2);
+
+  const fitted = new THREE.Box3().setFromObject(root);
+  root.position.y -= fitted.min.y;
 }
 
 function fitModelToSize(root: THREE.Object3D, targetSize: number) {
@@ -532,6 +518,22 @@ function ResponsiveCamera() {
     camera.near = 0.05;
     camera.far = 100;
     camera.lookAt(...target);
+
+    if (
+      tableViewOffsetRef.width === size.width &&
+      tableViewOffsetRef.height === size.height &&
+      tableViewOffsetRef.offsetY > 0
+    ) {
+      camera.setViewOffset(
+        size.width,
+        size.height,
+        0,
+        size.height * tableViewOffsetRef.offsetY,
+        size.width,
+        size.height,
+      );
+    }
+
     camera.updateProjectionMatrix();
   }, [camera, size.width, size.height, cam.fov, cam.position, target]);
 
@@ -560,18 +562,11 @@ function TableModel({
   useLayoutEffect(() => {
     fitTableToSize(tableRoot, targetScale);
     applyTableMaterials(tableRoot);
-    optimizeModelForGpu(tableRoot);
 
     if (camera instanceof THREE.PerspectiveCamera) {
       const centerY = getTableCenterY(tableRoot, tablePos);
       resolveTableViewOffsetY(camera, size.width, size.height, tablePos, centerY);
-      scaleTableToFitViewport(
-        tableRoot,
-        tablePos,
-        camera,
-        TABLE_HEIGHT_FRACTION,
-        TABLE_MAX_WIDTH_FRACTION,
-      );
+      scaleTableToScreenBand(tableRoot, tablePos, camera, TABLE_HEIGHT_FRACTION);
       resolveTableViewOffsetY(
         camera,
         size.width,
@@ -616,6 +611,7 @@ function TableScene({
   );
   const { size } = useThree();
   const target = getTableTarget(size.width);
+  const shadow = getTableShadow(size.width);
   const mobile = size.width < 768;
 
   useEffect(() => {
@@ -645,18 +641,18 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.72 : 0.68} color="#FFFBF6" />
-      <hemisphereLight args={["#FFFEF8", "#8E7048", mobile ? 0.42 : 0.4]} />
+      <ambientLight intensity={mobile ? 0.68 : 0.64} color="#FFFCF8" />
+      <hemisphereLight args={["#FFFCFA", TABLE_COLOR, mobile ? 0.36 : 0.34]} />
 
       <directionalLight
-        position={[0.15, 5.2, 2.6]}
-        intensity={mobile ? 0.82 : 0.86}
-        color="#FFFAF5"
+        position={[0.2, 4.8, 2.8]}
+        intensity={mobile ? 0.62 : 0.66}
+        color="#FFF8F2"
       />
 
       <directionalLight
-        position={[-0.4, 2.4, 1.1]}
-        intensity={mobile ? 0.38 : 0.42}
+        position={[-0.35, 2.2, 1.05]}
+        intensity={mobile ? 0.34 : 0.38}
         color="#FFF6EC"
       />
 
@@ -666,16 +662,27 @@ function TableScene({
 
       {surfaceY !== null && (
         <pointLight
-          position={[0, surfaceY + 0.2, 0.52]}
-          intensity={0.48}
-          color="#FFF8F0"
-          distance={5.5}
+          position={[0, surfaceY + 0.08, 0.58]}
+          intensity={0.72}
+          color="#FFF9EE"
+          distance={4.2}
         />
       )}
 
       {surfaceY !== null && tableTopWidth !== null && productsReady && (
         <TableProducts surfaceY={surfaceY} tableTopWidth={tableTopWidth} />
       )}
+
+      <ContactShadows
+        position={[0, shadow.groundY, 0.52]}
+        opacity={shadow.opacity}
+        scale={shadow.scale}
+        blur={shadow.blur}
+        far={2}
+        color="#2A2018"
+        frames={1}
+        resolution={256}
+      />
     </>
   );
 }
@@ -688,11 +695,14 @@ function TableLoader() {
   );
 }
 
-export default function JewelryHome({ visible }: JewelryHomeProps) {
+export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps) {
   const [tableReady, setTableReady] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [gpuLost, setGpuLost] = useState(false);
-  const handleReady = useCallback(() => setTableReady(true), []);
+  const handleReady = useCallback(() => {
+    setTableReady(true);
+    onTableReady?.();
+  }, [onTableReady]);
 
   useEffect(() => {
     const sync = () => setMobile(window.innerWidth < 768);
@@ -728,10 +738,10 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
 
       <Canvas
         shadows={false}
-        dpr={1}
+        dpr={mobile ? 1 : [1, 1.05]}
         className="h-full w-full"
         gl={{
-          antialias: false,
+          antialias: !mobile,
           alpha: true,
           powerPreference: "default",
           stencil: false,
