@@ -92,13 +92,14 @@ function applyTableMaterials(root: THREE.Object3D) {
 
       const isLeg = name.includes("leg") || name.includes("base") || name.includes("bottom");
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
+      mat.color.lerp(new THREE.Color(colors.goldLight), isLeg ? 0.06 : 0.1);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set(TABLE_COLOR).multiplyScalar(0.035);
+        mat.emissive.set("#FFF8E8").multiplyScalar(0.045);
       }
-      if ("metalness" in mat) mat.metalness = 0.04;
-      if ("roughness" in mat) mat.roughness = 0.52;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.15;
+      if ("metalness" in mat) mat.metalness = 0.03;
+      if ("roughness" in mat) mat.roughness = 0.55;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.12;
     });
   });
 }
@@ -118,8 +119,8 @@ function fitTableToSize(root: THREE.Object3D, targetSize: number) {
     root.scale.setScalar(targetSize / maxDim);
   }
 
-  root.scale.x *= 1.16;
-  root.scale.z *= 1.1;
+  root.scale.x *= 1.1;
+  root.scale.z *= 1.06;
 
   root.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(root);
@@ -601,9 +602,9 @@ function TableScene({
 
       {surfaceY !== null && (
         <pointLight
-          position={[0, surfaceY + 0.06, 0.54]}
-          intensity={0.78}
-          color="#FFF6EA"
+          position={[0, surfaceY + 0.06, 0.62]}
+          intensity={0.82}
+          color="#FFF9EE"
           distance={3.6}
         />
       )}
@@ -611,7 +612,7 @@ function TableScene({
       {surfaceY !== null && showProducts && <TableProducts surfaceY={surfaceY} />}
 
       <ContactShadows
-        position={[0, shadow.groundY, 0.44]}
+        position={[0, shadow.groundY, 0.52]}
         opacity={shadow.opacity}
         scale={shadow.scale}
         blur={shadow.blur}

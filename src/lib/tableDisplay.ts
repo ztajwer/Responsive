@@ -3,24 +3,24 @@ export const TABLE_POLAR_ANGLE = 1.38;
 
 export const TABLE_DISPLAY = {
   position: {
-    mobile: [0, 0, 0.46] as [number, number, number],
-    tablet: [0, 0, 0.42] as [number, number, number],
-    desktop: [0, 0, 0.4] as [number, number, number],
+    mobile: [0, 0, 0.54] as [number, number, number],
+    tablet: [0, 0, 0.49] as [number, number, number],
+    desktop: [0, 0, 0.46] as [number, number, number],
   },
   target: {
-    mobile: [0, 0.24, 0.46] as [number, number, number],
-    tablet: [0, 0.2, 0.42] as [number, number, number],
-    desktop: [0, 0.18, 0.4] as [number, number, number],
+    mobile: [0, 0.24, 0.54] as [number, number, number],
+    tablet: [0, 0.2, 0.49] as [number, number, number],
+    desktop: [0, 0.18, 0.46] as [number, number, number],
   },
   scale: {
-    mobile: 0.72,
-    tablet: 0.52,
-    desktop: 0.46,
+    mobile: 0.64,
+    tablet: 0.46,
+    desktop: 0.4,
   },
   camera: {
-    mobile: { position: [0, 0.44, 1.62] as [number, number, number], fov: 38 },
-    tablet: { position: [0, 0.42, 1.95] as [number, number, number], fov: 34 },
-    desktop: { position: [0, 0.4, 2.15] as [number, number, number], fov: 32 },
+    mobile: { position: [0, 0.44, 1.72] as [number, number, number], fov: 38 },
+    tablet: { position: [0, 0.42, 2.05] as [number, number, number], fov: 34 },
+    desktop: { position: [0, 0.4, 2.25] as [number, number, number], fov: 32 },
   },
   shadow: {
     scale: { mobile: 2.1, tablet: 1.7, desktop: 1.5 },
@@ -43,8 +43,8 @@ export function getTableScale(width: number, height = width) {
   const bp = getTableBreakpoint(width);
   const base = TABLE_DISPLAY.scale[bp];
   if (bp !== "mobile" || height <= 0) return base;
-  if (height < 400) return base + 0.08;
-  if (height < 680) return base + 0.05;
+  if (height < 400) return base + 0.06;
+  if (height < 680) return base + 0.04;
   return base;
 }
 
