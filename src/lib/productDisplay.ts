@@ -46,7 +46,7 @@ export interface ProductArcItem {
   displaySize: number;
 }
 
-/** Curved arc of products on the table surface with spacing */
+/** Products in a tight arc sitting on the table surface */
 export function getProductArcLayout(
   surfaceY: number,
   viewportWidth: number,
@@ -56,21 +56,21 @@ export function getProductArcLayout(
   const mobile = viewportWidth < 768;
   const models = getProductModelUrls();
   const count = models.length;
-  const arcRadius = Math.max(mobile ? 0.34 : 0.4, displaySize * (mobile ? 2.9 : 3.2));
-  const arcSpread = mobile ? 1.18 : 1.24;
-  const forwardZ = mobile ? 0.36 : 0.4;
-  const liftAboveTable = mobile ? 0.045 : 0.038;
+  const arcRadius = Math.max(mobile ? 0.18 : 0.22, displaySize * (mobile ? 1.55 : 1.7));
+  const arcSpread = mobile ? 0.88 : 0.92;
+  const forwardZ = mobile ? 0.3 : 0.28;
+  const liftAboveTable = 0.008;
 
   return models.map((url, index) => {
     const t = index / (count - 1);
     const angle = (t - 0.5) * arcSpread;
     const x = Math.sin(angle) * arcRadius;
-    const z = forwardZ + Math.cos(angle) * arcRadius * 0.16;
+    const z = forwardZ + Math.cos(angle) * arcRadius * 0.12;
 
     return {
       url,
       position: [x, surfaceY + liftAboveTable, z],
-      rotation: [0, -angle * 0.32, 0],
+      rotation: [0, -angle * 0.28, 0],
       displaySize,
     };
   });

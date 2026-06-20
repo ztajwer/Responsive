@@ -8,24 +8,24 @@
   --maj-white: #fffbf7;
   --maj-brown: #3d2b1f;
   --maj-cream: #faf6f1;
-  --table-band-height: min(44vh, 400px);
+  --table-band-height: min(36vh, 340px);
 }
 
 @media (min-width: 640px) {
   :root {
-    --table-band-height: min(48vh, 460px);
+    --table-band-height: min(38vh, 360px);
   }
 }
 
 @media (min-width: 768px) {
   :root {
-    --table-band-height: min(50vh, 500px);
+    --table-band-height: min(40vh, 380px);
   }
 }
 
 @media (min-width: 1024px) {
   :root {
-    --table-band-height: min(52vh, 540px);
+    --table-band-height: min(42vh, 400px);
   }
 }
 
@@ -124,7 +124,13 @@ body {
 
 .shop-table-layer {
   position: absolute;
-  inset: 0;
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--table-band-height);
+  min-height: 260px;
+  max-height: 400px;
   z-index: 10;
   touch-action: none;
 }
@@ -138,13 +144,9 @@ body {
   }
 
   .shop-table-layer {
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 58vh;
-    min-height: 320px;
-    max-height: 520px;
+    height: min(40vh, 360px);
+    min-height: 240px;
+    max-height: 360px;
   }
 }
 
