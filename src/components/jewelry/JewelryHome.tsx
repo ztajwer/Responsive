@@ -222,7 +222,7 @@ function fitProductToUniformSize(root: THREE.Object3D, targetHeight: number) {
   root.position.set(-center.x, -fitted.min.y, -center.z);
 }
 
-function setupProductShadows(root: THREE.Object3D) {
+function setupProductColors(root: THREE.Object3D) {
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh || !mesh.material) return;
@@ -233,15 +233,18 @@ function setupProductShadows(root: THREE.Object3D) {
     mats.forEach((mat) => {
       if ("transparent" in mat && mat.transparent) return;
       if ("color" in mat && mat.color instanceof THREE.Color) {
-        mat.color.offsetHSL(0, 0.03, 0.055);
+        mat.color.offsetHSL(0, 0.05, 0.09);
       }
       if ("metalness" in mat && typeof mat.metalness === "number") {
-        mat.metalness = Math.min(mat.metalness, 0.28);
+        mat.metalness = 0;
       }
       if ("roughness" in mat && typeof mat.roughness === "number") {
-        mat.roughness = Math.max(mat.roughness, 0.62);
+        mat.roughness = Math.max(mat.roughness, 0.72);
       }
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.1;
+      if ("envMapIntensity" in mat) mat.envMapIntensity = 0;
+      if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
+        mat.emissive.set("#000000");
+      }
     });
   });
 }
@@ -374,7 +377,6 @@ const ProductModel = memo(function ProductModel({
 }) {
   const { gl } = useThree();
   const groupRef = useRef<THREE.Group>(null);
-  const glowRef = useRef<THREE.PointLight>(null);
   const hoverRef = useRef(0);
   const [hovered, setHovered] = useState(false);
   useCursor(hovered);
@@ -386,7 +388,7 @@ const ProductModel = memo(function ProductModel({
 
   useLayoutEffect(() => {
     fitProductToUniformSize(productRoot, displaySize);
-    setupProductShadows(productRoot);
+    setupProductColors(productRoot);
 
     const box = new THREE.Box3().setFromObject(productRoot);
     const size = box.getSize(new THREE.Vector3());
@@ -406,10 +408,6 @@ const ProductModel = memo(function ProductModel({
     groupRef.current.position.set(position[0], position[1] + ease * HOVER_LIFT, position[2]);
     groupRef.current.rotation.set(rotation[0], rotation[1] + ease * 0.05, rotation[2]);
     groupRef.current.scale.setScalar(1 + ease * (HOVER_SCALE - 1));
-
-    if (glowRef.current) {
-      glowRef.current.intensity = ease * 1.15;
-    }
   });
 
   const handlePointerOver = useCallback(
@@ -451,14 +449,6 @@ const ProductModel = memo(function ProductModel({
       </mesh>
 
       <ProductGlitter active={hovered} radius={bounds.radius} height={bounds.height} />
-
-      <pointLight
-        ref={glowRef}
-        position={[0, bounds.height * 0.55, 0]}
-        intensity={0}
-        color="#FFF0D8"
-        distance={displaySize * 4.2}
-      />
     </group>
   );
 });
@@ -495,12 +485,6 @@ function TableProducts({
 
   return (
     <group>
-      <pointLight
-        position={[0, surfaceY + 0.14, 0.48]}
-        intensity={0.3}
-        color="#FFF8F0"
-        distance={4.2}
-      />
       {visibleLayout.map((item) => (
         <Suspense key={item.url} fallback={null}>
           <ProductModel
