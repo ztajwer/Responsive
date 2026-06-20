@@ -24,6 +24,7 @@ import {
 } from "@/lib/productDisplay";
 import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
 import { colors } from "@/lib/colors";
+import { areProductModelsPreloaded, preloadProductModels } from "@/lib/modelPreload";
 
 interface JewelryHomeProps {
   visible: boolean;
@@ -250,7 +251,7 @@ function enhanceProductMaterials(root: THREE.Object3D) {
   });
 }
 
-const HOVER_LIFT = 0.048;
+const PRODUCT_STAGGER_MS = 140;
 const HOVER_SCALE = 1.08;
 const GLITTER_COUNT = 16;
 
@@ -388,7 +389,8 @@ const ProductModel = memo(function ProductModel({
     radius: displaySize * 0.35,
     height: displaySize * 0.5,
   });
-  const { scene: productRoot } = useGLTF(url, false, false, extendGltfLoader);
+  const { scene: sourceScene } = useGLTF(url, false, false, extendGltfLoader);
+  const productRoot = useMemo(() => sourceScene.clone(true), [sourceScene]);
 
   useLayoutEffect(() => {
     fitProductToSize(productRoot, displaySize);
@@ -470,7 +472,6 @@ const ProductModel = memo(function ProductModel({
 
 function TableProducts({ surfaceY }: { surfaceY: number }) {
   const { size } = useThree();
-  const [visibleCount, setVisibleCount] = useState(1);
   const displaySize = useMemo(
     () => getProductDisplaySize(size.width, size.height),
     [size.width, size.height],
@@ -479,10 +480,28 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
     () => getProductArcLayout(surfaceY, size.width, size.height, displaySize),
     [surfaceY, size.width, size.height, displaySize],
   );
+  const [visibleCount, setVisibleCount] = useState(() =>
+    areProductModelsPreloaded() ? layout.length : 1,
+  );
 
   useEffect(() => {
+    void preloadProductModels();
+  }, []);
+
+  useEffect(() => {
+    setVisibleCount((count) => {
+      if (areProductModelsPreloaded()) return layout.length;
+      return Math.min(count, layout.length);
+    });
+  }, [layout.length]);
+
+  useEffect(() => {
+    if (areProductModelsPreloaded()) {
+      setVisibleCount(layout.length);
+      return;
+    }
     if (visibleCount >= layout.length) return;
-    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), 400);
+    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), PRODUCT_STAGGER_MS);
     return () => window.clearTimeout(id);
   }, [visibleCount, layout.length]);
 
@@ -552,7 +571,8 @@ function TableModel({
   onSurfaceY: (y: number) => void;
 }) {
   const tableUrl = useMemo(() => getTableModelUrl(), []);
-  const { scene: tableRoot } = useGLTF(tableUrl, false, false, extendGltfLoader);
+  const { scene: sourceScene } = useGLTF(tableUrl, false, false, extendGltfLoader);
+  const tableRoot = useMemo(() => sourceScene.clone(true), [sourceScene]);
   const groupRef = useRef<THREE.Group>(null);
   const { size, camera } = useThree();
   const targetScale = getTableScale(size.width, size.height);
@@ -706,12 +726,14 @@ export default function JewelryHome({ visible }: JewelryHomeProps) {
 
       <Canvas
         shadows={!mobile}
-        dpr={mobile ? [1, 1.25] : [1, 1.1]}
+        dpr={mobile ? [1, 1.2] : [1, 1.08]}
         className="h-full w-full"
         gl={{
           antialias: !mobile,
           alpha: true,
           powerPreference: "high-performance",
+          stencil: false,
+          depth: true,
         }}
         onCreated={({ gl }) => {
           gl.setClearColor(0x000000, 0);
