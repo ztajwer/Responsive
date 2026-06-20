@@ -33,8 +33,8 @@ interface JewelryHomeProps {
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
 /** Size only — placement unchanged */
-const TABLE_HEIGHT_FRACTION = 0.192;
-const TABLE_MAX_WIDTH_FRACTION = 0.645;
+const TABLE_HEIGHT_FRACTION = 0.205;
+const TABLE_MAX_WIDTH_FRACTION = 0.66;
 const TABLE_CENTER_NDC_TARGET = -0.14;
 const PRODUCT_STAGGER_MS = 220;
 const HOVER_LIFT = 0.038;

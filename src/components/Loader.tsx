@@ -2,20 +2,29 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
-import LoaderStars from "./LoaderStars";
+import LoaderFallingGlitter from "./LoaderFallingGlitter";
+import { preloadDoorImages, preloadNextProductModel, preloadShopImages, preloadTableModel, warmShopExperienceModule } from "@/lib/modelPreload";
 
 interface LoaderProps {
   onComplete: () => void;
 }
 
-const LOADER_DURATION_MS = 3500;
-const FADE_DURATION_MS = 450;
+const LOADER_DURATION_MS = 2800;
+const FADE_DURATION_MS = 400;
 
 export default function Loader({ onComplete }: LoaderProps) {
   const [visible, setVisible] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
   const finishedRef = useRef(false);
+
+  useEffect(() => {
+    preloadTableModel();
+    preloadDoorImages();
+    preloadShopImages();
+    preloadNextProductModel(0);
+    warmShopExperienceModule();
+  }, []);
 
   const finish = useCallback(() => {
     if (finishedRef.current) return;
@@ -53,7 +62,7 @@ export default function Loader({ onComplete }: LoaderProps) {
 
   return (
     <div
-      className={`loader-screen fixed inset-0 z-50 transition-opacity duration-[450ms] ease-out ${
+      className={`loader-screen fixed inset-0 z-50 transition-opacity duration-[400ms] ease-out ${
         fadeOut ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
@@ -67,7 +76,7 @@ export default function Loader({ onComplete }: LoaderProps) {
         aria-hidden
       />
 
-      <LoaderStars />
+      <LoaderFallingGlitter progress={displayProgress} />
 
       <div className="loader-frame pointer-events-none absolute border border-maj-gold/15" />
 
@@ -75,15 +84,24 @@ export default function Loader({ onComplete }: LoaderProps) {
         <div className="loader-stack animate-fade-up">
           <div className="loader-logo-wrap">
             <div className="relative">
-              <div className="absolute -inset-10 rounded-full bg-maj-gold/18 blur-3xl sm:-inset-12" />
+              <div className="absolute -inset-10 rounded-full bg-maj-gold/14 blur-3xl sm:-inset-12" />
               <div className="loader-logo-size relative">
+                <Image
+                  src="/logo_outline.png"
+                  alt=""
+                  fill
+                  priority
+                  sizes="(max-width: 640px) 80vw, (max-width: 768px) 52vw, 360px"
+                  className="loader-logo-outline object-contain object-center"
+                  aria-hidden
+                />
                 <Image
                   src="/wh_logo-removebg-preview.png"
                   alt="MAJ Boutique"
                   fill
                   priority
                   sizes="(max-width: 640px) 72vw, (max-width: 768px) 48vw, 320px"
-                  className="object-contain object-center drop-shadow-[0_8px_28px_rgba(212,175,55,0.28)]"
+                  className="loader-logo-front relative z-10 object-contain object-center drop-shadow-[0_8px_28px_rgba(212,175,55,0.28)]"
                 />
               </div>
             </div>

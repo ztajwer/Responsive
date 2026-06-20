@@ -3,25 +3,28 @@
 import { useEffect } from "react";
 import {
   preloadDoorImages,
+  preloadNextProductModel,
   preloadShopImages,
   preloadTableModel,
   scheduleIdle,
   warmShopExperienceModule,
 } from "@/lib/modelPreload";
 
-/** Warm CDN models + images early; products + shop chunk load during door interaction. */
+/** Warm critical assets immediately — stagger heavy GLBs during loader + door. */
 export default function ModelPreloader({ doorsReady }: { doorsReady: boolean }) {
   useEffect(() => {
     preloadTableModel();
     preloadDoorImages();
     preloadShopImages();
+    warmShopExperienceModule();
+    preloadNextProductModel(0);
   }, []);
 
   useEffect(() => {
     if (!doorsReady) return;
-
+    preloadNextProductModel(1);
     scheduleIdle(() => {
-      warmShopExperienceModule();
+      preloadNextProductModel(2);
     });
   }, [doorsReady]);
 

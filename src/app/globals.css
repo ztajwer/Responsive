@@ -261,6 +261,61 @@ body {
   flex-shrink: 0;
 }
 
+.loader-logo-outline {
+  transform: scale(1.14);
+  opacity: 0.82;
+  filter: drop-shadow(0 10px 24px rgba(228, 183, 139, 0.22));
+}
+
+.loader-logo-front {
+  transform: scale(0.88);
+}
+
+.loader-glitter-field {
+  z-index: 5;
+}
+
+.loader-falling-dot {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fffef5 0%, #e4b78b 42%, rgba(212, 175, 55, 0.35) 68%, transparent 100%);
+  opacity: var(--dot-opacity, 0.65);
+  animation: loaderGlitterFall var(--dot-fall-duration, 3.2s) linear infinite;
+  box-shadow:
+    0 0 8px rgba(255, 248, 230, 0.85),
+    0 0 14px rgba(228, 183, 139, 0.45);
+  will-change: transform, opacity;
+}
+
+.loader-falling-spark {
+  border-radius: 1px;
+  transform: rotate(45deg);
+  background: linear-gradient(135deg, #ffffff 0%, #f5e6c8 35%, #e4b78b 70%, transparent 100%);
+  box-shadow: 0 0 10px rgba(255, 250, 235, 0.95);
+}
+
+.loader-falling-shard {
+  border-radius: 40% 60% 55% 45%;
+  background: radial-gradient(circle at 30% 30%, #fff9ee 0%, #d4af37 55%, transparent 100%);
+  filter: blur(0.3px);
+}
+
+@keyframes loaderGlitterFall {
+  0% {
+    transform: translate3d(0, -12%, 0) scale(0.6);
+    opacity: 0;
+  }
+  8% {
+    opacity: var(--dot-opacity, 0.65);
+  }
+  85% {
+    opacity: calc(var(--dot-opacity, 0.65) * 0.85);
+  }
+  100% {
+    transform: translate3d(var(--dot-drift, 0), 112vh, 0) scale(0.85);
+    opacity: 0;
+  }
+}
+
 @media (min-width: 640px) {
   .loader-logo-size {
     width: clamp(11rem, min(44vw, 36dvh), 18rem);
@@ -346,11 +401,13 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .loader-star,
   .loader-star-flip,
+  .loader-falling-dot,
   .animate-fade-up {
     animation: none !important;
   }
 
-  .loader-star {
+  .loader-star,
+  .loader-falling-dot {
     opacity: 0.6;
   }
 }
