@@ -17,11 +17,11 @@ import {
   getTableScale,
   getTableShadow,
   getTableTarget,
-  getTableViewOffsetY,
 } from "@/lib/tableDisplay";
 import {
   getProductArcLayout,
   getProductDisplaySize,
+  getProductTargetPixels,
 } from "@/lib/productDisplay";
 import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
 
@@ -424,7 +424,7 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
       headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e2e4f9" },
       body: JSON.stringify({
         sessionId: "e2e4f9",
-      runId: "post-fix",
+      runId: "post-fix-v2",
       hypothesisId: "D",
         location: "JewelryHome.tsx:TableProducts",
         message: "product layout metrics",
