@@ -1,5 +1,4 @@
 {
-  "installCommand": "git lfs install && git lfs pull && npm install",
   "buildCommand": "npm run build",
   "env": {
     "NEXT_PUBLIC_GLB_BASE_URL": "https://media.githubusercontent.com/media/ztajwer/Responsive/main/public"

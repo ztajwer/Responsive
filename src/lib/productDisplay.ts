@@ -1,7 +1,5 @@
 import { getTableCamera, getTableTarget } from "./tableDisplay";
-import { PRODUCT_MODEL_URLS } from "./modelAssets";
-
-export const PRODUCT_MODELS = PRODUCT_MODEL_URLS;
+import { getProductModelUrls } from "./modelAssets";
 
 function worldSizeFromPixels(
   pixels: number,
@@ -56,13 +54,14 @@ export function getProductArcLayout(
   displaySize: number,
 ): ProductArcItem[] {
   const mobile = viewportWidth < 768;
-  const count = PRODUCT_MODELS.length;
+  const models = getProductModelUrls();
+  const count = models.length;
   const arcRadius = Math.max(mobile ? 0.34 : 0.4, displaySize * (mobile ? 2.9 : 3.2));
   const arcSpread = mobile ? 1.18 : 1.24;
   const forwardZ = mobile ? 0.36 : 0.4;
   const liftAboveTable = mobile ? 0.045 : 0.038;
 
-  return PRODUCT_MODELS.map((url, index) => {
+  return models.map((url, index) => {
     const t = index / (count - 1);
     const angle = (t - 0.5) * arcSpread;
     const x = Math.sin(angle) * arcRadius;
