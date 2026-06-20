@@ -1,4 +1,5 @@
-export const TABLE_POLAR_ANGLE = 1.555;
+/** Locked front-facing orbit (π/2 = straight-on view, no tilt). */
+export const TABLE_POLAR_ANGLE = Math.PI / 2;
 
 export const TABLE_DISPLAY = {
   position: {
@@ -7,19 +8,19 @@ export const TABLE_DISPLAY = {
     desktop: [0, 0, 0.3] as [number, number, number],
   },
   target: {
-    mobile: [0, 0.12, 0.3] as [number, number, number],
-    tablet: [0, 0.14, 0.28] as [number, number, number],
-    desktop: [0, 0.15, 0.27] as [number, number, number],
+    mobile: [0, 0.1, 0.34] as [number, number, number],
+    tablet: [0, 0.12, 0.31] as [number, number, number],
+    desktop: [0, 0.13, 0.3] as [number, number, number],
   },
   scale: {
-    mobile: 0.8,
+    mobile: 0.82,
     tablet: 0.54,
     desktop: 0.5,
   },
   camera: {
-    mobile: { position: [0, 0.13, 2.02] as [number, number, number], fov: 40 },
-    tablet: { position: [0, 0.17, 3.1] as [number, number, number], fov: 33 },
-    desktop: { position: [0, 0.17, 3.2] as [number, number, number], fov: 31 },
+    mobile: { position: [0, 0.1, 2.06] as [number, number, number], fov: 38 },
+    tablet: { position: [0, 0.12, 3.08] as [number, number, number], fov: 32 },
+    desktop: { position: [0, 0.13, 3.18] as [number, number, number], fov: 30 },
   },
   shadow: {
     scale: { mobile: 2.35, tablet: 1.9, desktop: 1.7 },
@@ -27,8 +28,8 @@ export const TABLE_DISPLAY = {
     blur: { mobile: 4.8, tablet: 4.2, desktop: 3.6 },
     groundY: 0.002,
   },
-  /** Nudge within bottom canvas band (layer is already at bottom on mobile) */
-  viewOffsetY: { mobile: 0.1, tablet: 0.18, desktop: 0.12 },
+  /** Push framing toward bottom band (mobile canvas is pinned low). */
+  viewOffsetY: { mobile: 0.16, tablet: 0.2, desktop: 0.14 },
 } as const;
 
 export type TableBreakpoint = "mobile" | "tablet" | "desktop";

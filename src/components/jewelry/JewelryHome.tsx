@@ -450,7 +450,8 @@ function TableModel({
     applyTableMaterials(tableRoot);
 
     const box = new THREE.Box3().setFromObject(tableRoot);
-    onSurfaceY(tablePos[1] + box.max.y);
+    const surfaceInset = size.width < 768 ? 0.006 : 0.004;
+    onSurfaceY(tablePos[1] + box.max.y - surfaceInset);
 
     if (!readyRef.current) {
       readyRef.current = true;

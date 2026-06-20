@@ -140,8 +140,8 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 58vh;
-    min-height: 320px;
+    height: 60vh;
+    min-height: 340px;
     max-height: 520px;
   }
 }
