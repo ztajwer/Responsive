@@ -13,9 +13,9 @@ export const TABLE_DISPLAY = {
     desktop: [0, 0.18, 0.4] as [number, number, number],
   },
   scale: {
-    mobile: 0.74,
-    tablet: 0.54,
-    desktop: 0.48,
+    mobile: 0.82,
+    tablet: 0.58,
+    desktop: 0.52,
   },
   camera: {
     mobile: { position: [0, 0.4, 1.58] as [number, number, number], fov: 36 },

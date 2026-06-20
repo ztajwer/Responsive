@@ -32,11 +32,12 @@ interface JewelryHomeProps {
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Big table, centered in the bottom canvas band */
-const TABLE_HEIGHT_FRACTION = 0.44;
-const TABLE_CENTER_NDC_TARGET = 0.08;
+/** Big table, upper area of the bottom canvas band */
+const TABLE_HEIGHT_FRACTION = 0.5;
+const TABLE_CENTER_NDC_TARGET = 0.12;
 const PRODUCT_STAGGER_MS = 220;
 const HOVER_LIFT = 0.048;
+const HOVER_SCALE = 1.08;
 
 function getTableCenterY(root: THREE.Object3D, tablePos: [number, number, number]) {
   const box = new THREE.Box3().setFromObject(root);
@@ -389,8 +390,7 @@ const ProductModel = memo(function ProductModel({
     radius: displaySize * 0.35,
     height: displaySize * 0.5,
   });
-  const { scene: sourceScene } = useGLTF(url, false, false, extendGltfLoader);
-  const productRoot = useMemo(() => sourceScene.clone(true), [sourceScene]);
+  const { scene: productRoot } = useGLTF(url, false, false, extendGltfLoader);
 
   useLayoutEffect(() => {
     fitProductToSize(productRoot, displaySize);
@@ -480,27 +480,11 @@ function TableProducts({ surfaceY }: { surfaceY: number }) {
     () => getProductArcLayout(surfaceY, size.width, size.height, displaySize),
     [surfaceY, size.width, size.height, displaySize],
   );
-  const [visibleCount, setVisibleCount] = useState(() =>
-    areProductModelsPreloaded() ? layout.length : 1,
-  );
+  const [visibleCount, setVisibleCount] = useState(1);
 
   useEffect(() => {
-    void preloadProductModels();
-  }, []);
-
-  useEffect(() => {
-    setVisibleCount((count) => {
-      if (areProductModelsPreloaded()) return layout.length;
-      return Math.min(count, layout.length);
-    });
-  }, [layout.length]);
-
-  useEffect(() => {
-    if (areProductModelsPreloaded()) {
-      setVisibleCount(layout.length);
-      return;
-    }
     if (visibleCount >= layout.length) return;
+    preloadNextProductModel(visibleCount);
     const id = window.setTimeout(() => setVisibleCount((count) => count + 1), PRODUCT_STAGGER_MS);
     return () => window.clearTimeout(id);
   }, [visibleCount, layout.length]);
@@ -552,9 +536,6 @@ function ResponsiveCamera() {
     camera.near = 0.05;
     camera.far = 100;
     camera.lookAt(...target);
-
-    const tablePos = getTablePosition(size.width);
-    camera.clearViewOffset();
     camera.updateProjectionMatrix();
   }, [camera, size.width, size.height, cam.fov, cam.position, target]);
 
@@ -571,8 +552,7 @@ function TableModel({
   onSurfaceY: (y: number) => void;
 }) {
   const tableUrl = useMemo(() => getTableModelUrl(), []);
-  const { scene: sourceScene } = useGLTF(tableUrl, false, false, extendGltfLoader);
-  const tableRoot = useMemo(() => sourceScene.clone(true), [sourceScene]);
+  const { scene: tableRoot } = useGLTF(tableUrl, false, false, extendGltfLoader);
   const groupRef = useRef<THREE.Group>(null);
   const { size, camera } = useThree();
   const targetScale = getTableScale(size.width, size.height);

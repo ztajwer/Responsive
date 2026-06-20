@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import {
   preloadDoorImages,
-  preloadProductModels,
   preloadShopImages,
   preloadTableModel,
   scheduleIdle,

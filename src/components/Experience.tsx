@@ -17,10 +17,7 @@ import {
   startBoutiqueAudioFromGesture,
   stopBoutiqueAudio,
 } from "@/lib/boutiqueAudio";
-import {
-  preloadProductModels,
-  warmShopExperienceModule,
-} from "@/lib/modelPreload";
+import { warmShopExperienceModule } from "@/lib/modelPreload";
 import { useScrollDoorProgress } from "@/hooks/useScrollDoorProgress";
 
 const ShopExperience = dynamic(() => import("./jewelry/ShopExperience"), {

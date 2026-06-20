@@ -63,7 +63,3 @@ export function scheduleIdle(task: () => void) {
 export function warmShopExperienceModule() {
   void import("@/components/jewelry/ShopExperience");
 }
-
-export function areProductModelsPreloaded() {
-  return false;
-}
