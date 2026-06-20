@@ -129,10 +129,12 @@ body {
   left: 0;
   right: 0;
   height: var(--table-band-height);
-  min-height: 260px;
-  max-height: 400px;
+  min-height: 240px;
+  max-height: 380px;
   z-index: 10;
   touch-action: none;
+  display: flex;
+  align-items: flex-end;
 }
 
 @media (max-width: 767px) {
@@ -144,9 +146,9 @@ body {
   }
 
   .shop-table-layer {
-    height: min(40vh, 360px);
-    min-height: 240px;
-    max-height: 360px;
+    height: min(38vh, 340px);
+    min-height: 220px;
+    max-height: 340px;
   }
 }
 

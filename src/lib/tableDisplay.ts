@@ -7,9 +7,9 @@ export const TABLE_DISPLAY = {
     desktop: [0, 0, 0.3] as [number, number, number],
   },
   target: {
-    mobile: [0, 0.12, 0.3] as [number, number, number],
-    tablet: [0, 0.14, 0.28] as [number, number, number],
-    desktop: [0, 0.15, 0.27] as [number, number, number],
+    mobile: [0, 0.05, 0.3] as [number, number, number],
+    tablet: [0, 0.06, 0.28] as [number, number, number],
+    desktop: [0, 0.06, 0.27] as [number, number, number],
   },
   scale: {
     mobile: 0.66,
@@ -17,9 +17,9 @@ export const TABLE_DISPLAY = {
     desktop: 0.4,
   },
   camera: {
-    mobile: { position: [0, 0.1, 2.05] as [number, number, number], fov: 40 },
-    tablet: { position: [0, 0.12, 3.05] as [number, number, number], fov: 33 },
-    desktop: { position: [0, 0.12, 3.1] as [number, number, number], fov: 31 },
+    mobile: { position: [0, 0.04, 2.02] as [number, number, number], fov: 40 },
+    tablet: { position: [0, 0.06, 3.02] as [number, number, number], fov: 33 },
+    desktop: { position: [0, 0.06, 3.05] as [number, number, number], fov: 31 },
   },
   shadow: {
     scale: { mobile: 2.35, tablet: 1.9, desktop: 1.7 },
@@ -27,8 +27,8 @@ export const TABLE_DISPLAY = {
     blur: { mobile: 4.8, tablet: 4.2, desktop: 3.6 },
     groundY: 0.002,
   },
-  /** Push table to bottom of canvas band */
-  viewOffsetY: { mobile: 0.24, tablet: 0.28, desktop: 0.26 },
+  /** Push full table flush to bottom of canvas */
+  viewOffsetY: { mobile: 0.46, tablet: 0.5, desktop: 0.48 },
 } as const;
 
 export type TableBreakpoint = "mobile" | "tablet" | "desktop";
@@ -72,16 +72,16 @@ export function getTableShadow(width: number) {
 
 export function getTableViewOffsetY(width: number, height = width) {
   const bp = getTableBreakpoint(width);
-  const base = TABLE_DISPLAY.viewOffsetY[bp];
-  if (height <= 0) return base;
+  let offset = TABLE_DISPLAY.viewOffsetY[bp];
+  if (height <= 0) return offset;
 
   if (bp === "mobile" && height < 680) {
-    return base + 0.04;
+    offset += 0.05;
   }
 
   if (bp === "tablet" && height < 720) {
-    return Math.min(0.24, base + 0.04);
+    offset += 0.04;
   }
 
-  return base;
+  return Math.min(0.58, offset);
 }

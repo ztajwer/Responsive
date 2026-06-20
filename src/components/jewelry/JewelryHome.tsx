@@ -29,10 +29,7 @@ interface JewelryHomeProps {
   visible: boolean;
 }
 
-const GOLD_MAIN = new THREE.Color("#E3B485");
-const GOLD_LIGHT = new THREE.Color("#EDD4B8");
-const GOLD_SHADE = new THREE.Color("#C99E6E");
-const GOLD_WARM = new THREE.Color("#E8C090");
+const TABLE_COLOR = "#E3B485";
 
 function applyTableMaterials(root: THREE.Object3D) {
   root.traverse((child) => {
@@ -61,11 +58,10 @@ function applyTableMaterials(root: THREE.Object3D) {
       if (!("color" in mat) || !(mat.color instanceof THREE.Color)) return;
 
       const isLeg = name.includes("leg") || name.includes("base") || name.includes("bottom");
-      const base = isLeg ? GOLD_SHADE : GOLD_MAIN;
-      mat.color.copy(base).lerp(isLeg ? GOLD_WARM : GOLD_LIGHT, isLeg ? 0.28 : 0.42);
+      mat.color.set(isLeg ? "#C99A6A" : TABLE_COLOR);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#4A3A20").multiplyScalar(isLeg ? 0.03 : 0.045);
+        mat.emissive.set(TABLE_COLOR).multiplyScalar(isLeg ? 0.02 : 0.035);
       }
       if ("metalness" in mat) mat.metalness = isLeg ? 0.58 : 0.64;
       if ("roughness" in mat) mat.roughness = isLeg ? 0.28 : 0.22;
