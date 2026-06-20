@@ -33,8 +33,8 @@ interface JewelryHomeProps {
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
 /** Size only — placement unchanged */
-const TABLE_HEIGHT_FRACTION = 0.162;
-const TABLE_MAX_WIDTH_FRACTION = 0.58;
+const TABLE_HEIGHT_FRACTION = 0.178;
+const TABLE_MAX_WIDTH_FRACTION = 0.62;
 const TABLE_CENTER_NDC_TARGET = -0.14;
 const PRODUCT_STAGGER_MS = 220;
 const HOVER_LIFT = 0.038;
@@ -224,9 +224,17 @@ function fitProductToUniformSize(root: THREE.Object3D, targetHeight: number) {
 function setupProductShadows(root: THREE.Object3D) {
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
-    if (!mesh.isMesh) return;
+    if (!mesh.isMesh || !mesh.material) return;
     mesh.castShadow = true;
     mesh.receiveShadow = false;
+
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mats.forEach((mat) => {
+      if ("transparent" in mat && mat.transparent) return;
+      if ("color" in mat && mat.color instanceof THREE.Color) {
+        mat.color.offsetHSL(0, 0.015, -0.055);
+      }
+    });
   });
 }
 
