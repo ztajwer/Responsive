@@ -132,17 +132,17 @@ function isTableGlassMesh(name: string) {
   return /glass|pane|window|transparent|dome|cover|case|vitrine/i.test(name) && !/gem|jewel|diamond/i.test(name);
 }
 
-function makeDisplayGlassMaterial() {
+function makeDisplayGlassMaterial(desktop = false) {
   return new THREE.MeshPhysicalMaterial({
     color: new THREE.Color(0xffffff),
     metalness: 0.02,
-    roughness: 0.03,
-    transmission: 0.94,
-    thickness: 0.28,
+    roughness: desktop ? 0.02 : 0.03,
+    transmission: desktop ? 0.9 : 0.94,
+    thickness: desktop ? 0.32 : 0.28,
     ior: 1.52,
-    envMapIntensity: 1.35,
+    envMapIntensity: desktop ? 1.55 : 1.35,
     transparent: true,
-    opacity: 0.12,
+    opacity: desktop ? 0.24 : 0.12,
     side: THREE.DoubleSide,
     clearcoat: 1,
     clearcoatRoughness: 0.02,
@@ -235,39 +235,48 @@ function stripMaterialMaps(mat: THREE.MeshStandardMaterial) {
   mat.needsUpdate = true;
 }
 
-/** 5-shade jewelry counter gradient on single-mesh GLB bodies */
-function applyJewelryTableGradient(mesh: THREE.Mesh) {
-  const geometry = mesh.geometry;
-  geometry.computeBoundingBox();
-  const box = geometry.boundingBox;
-  if (!box) return;
+function lightenTableColor(base: THREE.Color, viewportWidth: number): THREE.Color {
+  const color = base.clone();
+  if (viewportWidth >= 1024) {
+    color.lerp(new THREE.Color(0xffffff), 0.12);
+  }
+  return color;
+}
 
-  const minY = box.min.y;
-  const height = Math.max(box.max.y - minY, 0.0001);
-  const leg = colorForTablePart("leg");
-  const side = colorForTablePart("side");
-  const panel = colorForTablePart("panel");
-  const top = colorForTablePart("top");
-  const gold = colorForTablePart("gold");
-  const highlight = new THREE.Color(hexToThree(THEME_TABLE.highlight));
-  const bottom = new THREE.Color(hexToThree(THEME_TABLE.bottom));
+/** Wood body + height gradient — desktop gets slightly lighter wood + clearer top glass */
+function applyWoodenTableBody(mesh: THREE.Mesh, root: THREE.Object3D, viewportWidth: number) {
+  root.updateMatrixWorld(true);
+  const desktop = viewportWidth >= 1024;
+  const spanning = desktop && meshSpansTableHeight(mesh, root);
+  const rootBox = new THREE.Box3().setFromObject(root);
+  const minY = rootBox.min.y;
+  const height = Math.max(rootBox.getSize(new THREE.Vector3()).y, 0.0001);
+  const woodTop = minY + height * (desktop ? 0.58 : 0.68);
 
-  const mat = new THREE.MeshStandardMaterial({
+  const leg = lightenTableColor(colorForTablePart("leg"), viewportWidth);
+  const side = lightenTableColor(colorForTablePart("side"), viewportWidth);
+  const panel = lightenTableColor(colorForTablePart("panel"), viewportWidth);
+  const top = lightenTableColor(colorForTablePart("top"), viewportWidth);
+  const highlight = lightenTableColor(new THREE.Color(hexToThree(THEME_TABLE.highlight)), viewportWidth);
+  const bottom = lightenTableColor(new THREE.Color(hexToThree(THEME_TABLE.bottom)), viewportWidth);
+
+  const mat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
-    metalness: 0.08,
-    roughness: 0.56,
+    metalness: desktop ? 0.015 : 0.02,
+    roughness: desktop ? 0.78 : 0.74,
+    clearcoat: desktop ? 0.06 : 0.1,
+    clearcoatRoughness: desktop ? 0.48 : 0.38,
     emissive: new THREE.Color(0x000000),
     emissiveIntensity: 0,
   });
 
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uMinY = { value: minY };
-    shader.uniforms.uHeight = { value: height };
+    shader.uniforms.uWoodTop = { value: woodTop };
     shader.uniforms.uLegColor = { value: leg };
     shader.uniforms.uSideColor = { value: side };
     shader.uniforms.uPanelColor = { value: panel };
     shader.uniforms.uTopColor = { value: top };
-    shader.uniforms.uGoldColor = { value: gold };
     shader.uniforms.uHighlightColor = { value: highlight };
     shader.uniforms.uBottomColor = { value: bottom };
 
@@ -278,72 +287,100 @@ function applyJewelryTableGradient(mesh: THREE.Mesh) {
         "#include <worldpos_vertex>\nvMajWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;",
       );
 
+    const topClip = spanning
+      ? `if (vMajWorldPos.y > uWoodTop) {
+  discard;
+}
+`
+      : "";
+
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",
         `#include <common>
 varying vec3 vMajWorldPos;
 uniform float uMinY;
-uniform float uHeight;
+uniform float uWoodTop;
 uniform vec3 uLegColor;
 uniform vec3 uSideColor;
 uniform vec3 uPanelColor;
 uniform vec3 uTopColor;
-uniform vec3 uGoldColor;
 uniform vec3 uHighlightColor;
 uniform vec3 uBottomColor;`,
       )
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
-float t = clamp((vMajWorldPos.y - uMinY) / uHeight, 0.0, 1.0);
+${topClip}float span = max(uWoodTop - uMinY, 0.0001);
+float woodT = clamp((vMajWorldPos.y - uMinY) / span, 0.0, 1.0);
+
 vec3 grad = uBottomColor;
-if (t > 0.82) {
-  grad = mix(uTopColor, uHighlightColor, smoothstep(0.82, 1.0, t));
-} else if (t > 0.64) {
-  grad = mix(uPanelColor, uTopColor, smoothstep(0.64, 0.82, t));
-} else if (t > 0.44) {
-  grad = mix(uSideColor, uPanelColor, smoothstep(0.44, 0.64, t));
-} else if (t > 0.22) {
-  grad = mix(uLegColor, uSideColor, smoothstep(0.22, 0.44, t));
-} else {
-  grad = mix(uBottomColor, uLegColor, smoothstep(0.0, 0.22, t));
-}
+grad = mix(grad, uLegColor, smoothstep(0.0, 0.2, woodT));
+grad = mix(grad, uSideColor, smoothstep(0.2, 0.42, woodT));
+grad = mix(grad, uPanelColor, smoothstep(0.42, 0.68, woodT));
+grad = mix(grad, uTopColor, smoothstep(0.68, 0.9, woodT));
+grad = mix(grad, uHighlightColor, smoothstep(0.9, 1.0, woodT));
+
+float grain = sin(vMajWorldPos.y * 52.0 + vMajWorldPos.x * 24.0) * 0.012;
+grad *= 1.0 + grain;
+
+grad *= mix(0.76, 1.0, smoothstep(0.0, 0.28, woodT));
+
 diffuseColor.rgb *= grad;`,
       );
   };
 
-  mat.customProgramCacheKey = () => "maj-jewelry-table-gradient-v22";
+  mat.customProgramCacheKey = () => (desktop ? "maj-wooden-table-body-v31-desktop" : "maj-wooden-table-body-v30");
+  stripMaterialMaps(mat as unknown as THREE.MeshStandardMaterial);
   mesh.material = mat;
 }
 
-function makeThemedTableMaterial(kind: TablePartKind) {
-  const props = materialPropsForPart(kind);
-  const mat = new THREE.MeshStandardMaterial({
-    color: colorForTablePart(kind),
-    metalness: props.metalness,
-    roughness: props.roughness,
-    emissive: new THREE.Color(hexToThree(THEME_TABLE.emissive)),
-    emissiveIntensity: props.emissiveIntensity,
+function makeShowroomGoldTrimMaterial() {
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: colorForTablePart("gold"),
+    metalness: 0.82,
+    roughness: 0.24,
+    clearcoat: 0.9,
+    clearcoatRoughness: 0.06,
+    envMapIntensity: 1.2,
+    emissive: new THREE.Color(hexToThree(THEME_TABLE.gold)),
+    emissiveIntensity: 0.004,
   });
-  stripMaterialMaps(mat);
   return mat;
 }
 
-function isGlassByShape(mesh: THREE.Mesh, root: THREE.Object3D): boolean {
+function isTopGlassMesh(mesh: THREE.Mesh, root: THREE.Object3D, viewportWidth = 0): boolean {
   const rootBox = new THREE.Box3().setFromObject(root);
   const meshBox = new THREE.Box3().setFromObject(mesh);
   const rootH = Math.max(rootBox.getSize(new THREE.Vector3()).y, 0.0001);
   const meshSize = meshBox.getSize(new THREE.Vector3());
   const width = Math.max(meshSize.x, meshSize.z);
   const flatness = meshSize.y / Math.max(width, 0.001);
-  const centerY = meshBox.getCenter(new THREE.Vector3()).y;
-  const t = (centerY - rootBox.min.y) / rootH;
-  return flatness < 0.14 && t > 0.68 && width > 0.025;
+  const centerT = (meshBox.getCenter(new THREE.Vector3()).y - rootBox.min.y) / rootH;
+  const topT = (meshBox.max.y - rootBox.min.y) / rootH;
+  const desktop = viewportWidth >= 1024;
+
+  if (topT > 0.55 && flatness < 0.24 && width > 0.02) return true;
+  if (centerT > 0.6 && flatness < 0.16 && width > 0.022) return true;
+  if (desktop) {
+    if (topT > 0.48 && flatness < 0.3 && width > 0.018) return true;
+    if (centerT > 0.52 && flatness < 0.24 && width > 0.016) return true;
+  }
+  return false;
 }
 
-function applyTableSurfaceColor(root: THREE.Object3D) {
+function isWoodenBodyMesh(mesh: THREE.Mesh, root: THREE.Object3D, viewportWidth = 0): boolean {
+  const rootBox = new THREE.Box3().setFromObject(root);
+  const meshBox = new THREE.Box3().setFromObject(mesh);
+  const rootH = Math.max(rootBox.getSize(new THREE.Vector3()).y, 0.0001);
+  const centerT = (meshBox.getCenter(new THREE.Vector3()).y - rootBox.min.y) / rootH;
+  const threshold = viewportWidth >= 1024 ? 0.56 : 0.62;
+  return centerT < threshold;
+}
+
+function applyTableSurfaceColor(root: THREE.Object3D, viewportWidth: number) {
   root.updateMatrixWorld(true);
+  const desktop = viewportWidth >= 1024;
 
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
@@ -355,25 +392,30 @@ function applyTableSurfaceColor(root: THREE.Object3D) {
     mesh.castShadow = false;
     mesh.receiveShadow = false;
 
-    if (isTableGlassMesh(name) || isGlassByShape(mesh, root)) {
-      mesh.material = makeDisplayGlassMaterial();
+    if (isTableGlassMesh(name) || isTopGlassMesh(mesh, root, viewportWidth)) {
+      mesh.material = makeDisplayGlassMaterial(desktop);
       mesh.renderOrder = 3;
       return;
     }
 
-    const namedPart = resolveTablePartFromName(name);
-    if (namedPart && !meshSpansTableHeight(mesh, root)) {
-      mesh.material = makeThemedTableMaterial(namedPart);
+    if (resolveTablePartFromName(name) === "gold") {
+      mesh.material = makeShowroomGoldTrimMaterial();
       return;
     }
 
-    if (meshSpansTableHeight(mesh, root)) {
-      applyJewelryTableGradient(mesh);
+    if (desktop && /top|counter|surface|display|case|vitrine|pane|cover/i.test(name) && !/leg|base|foot|side|panel|wood/i.test(name)) {
+      mesh.material = makeDisplayGlassMaterial(true);
+      mesh.renderOrder = 3;
       return;
     }
 
-    const part = namedPart ?? resolveTablePartFromHeight(mesh, root);
-    mesh.material = makeThemedTableMaterial(part);
+    if (isWoodenBodyMesh(mesh, root, viewportWidth)) {
+      applyWoodenTableBody(mesh, root, viewportWidth);
+      return;
+    }
+
+    mesh.material = makeDisplayGlassMaterial(desktop);
+    mesh.renderOrder = 3;
   });
 }
 
@@ -791,7 +833,7 @@ function TableModel({
   useLayoutEffect(() => {
     fitTableToSize(tableRoot, targetScale);
     hideRoomKeepCounter(tableRoot);
-    applyTableSurfaceColor(tableRoot);
+    applyTableSurfaceColor(tableRoot, size.width);
 
     const calib = getShopLayoutCalib(size.width);
     let alignedY = tablePos[1];
