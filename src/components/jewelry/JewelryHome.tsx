@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import {
   ContactShadows,
@@ -22,6 +23,7 @@ import {
   getTableTarget,
 } from "@/lib/tableDisplay";
 import { extendGltfLoader, getProductModelUrls, getTableModelUrl } from "@/lib/modelAssets";
+import { getProductIdFromModelUrl } from "@/lib/products";
 import { getShopLayoutCalib } from "@/lib/shopLayoutCalib";
 import { optimizeModelForGpu } from "@/lib/gpuModelOptimize";
 import { colors } from "@/lib/colors";
@@ -30,6 +32,7 @@ import {
   getMaxShopProducts,
   type DeviceProfile,
 } from "@/lib/deviceProfile";
+import type { ProductId } from "@/lib/products";
 
 interface JewelryHomeProps {
   visible: boolean;
@@ -459,17 +462,20 @@ interface ProductBounds {
 
 const ProductModel = memo(function ProductModel({
   url,
+  productId,
   position,
   rotation,
   displaySize,
   textureMax = 1024,
 }: {
   url: string;
+  productId: ProductId;
   position: [number, number, number];
   rotation: [number, number, number];
   displaySize: number;
   textureMax?: number;
 }) {
+  const router = useRouter();
   const { gl } = useThree();
   const groupRef = useRef<THREE.Group>(null);
   const hoverRef = useRef(0);
@@ -533,6 +539,14 @@ const ProductModel = memo(function ProductModel({
     setHovered(true);
   }, []);
 
+  const handleClick = useCallback(
+    (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation();
+      router.push(`/product/${productId}`);
+    },
+    [productId, router],
+  );
+
   return (
     <group ref={groupRef} position={position} rotation={rotation}>
       <primitive object={productRoot} />
@@ -542,6 +556,7 @@ const ProductModel = memo(function ProductModel({
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
         onPointerDown={handlePointerDown}
+        onClick={handleClick}
         visible={false}
       >
         <boxGeometry args={[bounds.radius * 2.8, bounds.height * 1.25, bounds.radius * 2.8]} />
@@ -596,17 +611,23 @@ function TableProducts({
 
   return (
     <group>
-      {layout.map((item) => (
-        <Suspense key={item.url} fallback={null}>
-          <ProductModel
-            url={item.url}
-            position={toTableLocal(item.position, tablePos)}
-            rotation={item.rotation}
-            displaySize={item.displaySize}
-            textureMax={textureMax}
-          />
-        </Suspense>
-      ))}
+      {layout.map((item) => {
+        const productId = getProductIdFromModelUrl(item.url);
+        if (!productId) return null;
+
+        return (
+          <Suspense key={item.url} fallback={null}>
+            <ProductModel
+              url={item.url}
+              productId={productId}
+              position={toTableLocal(item.position, tablePos)}
+              rotation={item.rotation}
+              displaySize={item.displaySize}
+              textureMax={textureMax}
+            />
+          </Suspense>
+        );
+      })}
     </group>
   );
 }
