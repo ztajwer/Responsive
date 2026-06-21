@@ -147,8 +147,17 @@ function colorForTablePart(kind: TablePartKind): THREE.Color {
   }
 }
 
-function materialPropsForPart(_kind: TablePartKind) {
-  return { metalness: 0.24, roughness: 0.38, emissiveIntensity: 0.006 };
+function materialPropsForPart(kind: TablePartKind) {
+  if (kind === "gold") {
+    return { metalness: 0.58, roughness: 0.28, emissiveIntensity: 0.012 };
+  }
+  if (kind === "leg") {
+    return { metalness: 0.32, roughness: 0.4, emissiveIntensity: 0.005 };
+  }
+  if (kind === "top") {
+    return { metalness: 0.26, roughness: 0.36, emissiveIntensity: 0.007 };
+  }
+  return { metalness: 0.28, roughness: 0.38, emissiveIntensity: 0.006 };
 }
 
 /** GPU height gradient — safe for large single-mesh GLB (no CPU vertex loop) */
@@ -160,17 +169,17 @@ function applyHeightGradientMaterial(mesh: THREE.Mesh) {
 
   const minY = box.min.y;
   const height = Math.max(box.max.y - minY, 0.0001);
-  const leg = new THREE.Color(hexToThree(THEME_TABLE.top));
-  const panel = leg.clone();
-  const top = leg.clone();
+  const leg = colorForTablePart("leg");
+  const panel = colorForTablePart("panel");
+  const top = colorForTablePart("top");
   const highlight = new THREE.Color(hexToThree(THEME_TABLE.highlight));
 
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
-    metalness: 0.24,
-    roughness: 0.38,
-    emissive: new THREE.Color(hexToThree(THEME_TABLE.top)),
-    emissiveIntensity: 0.005,
+    metalness: 0.3,
+    roughness: 0.36,
+    emissive: new THREE.Color(hexToThree(THEME_TABLE.emissive)),
+    emissiveIntensity: 0.006,
   });
 
   mat.onBeforeCompile = (shader) => {
@@ -218,7 +227,7 @@ diffuseColor.rgb *= grad;`,
       );
   };
 
-  mat.customProgramCacheKey = () => "maj-table-uniform-d2a57e-v6";
+  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v7";
   mesh.material = mat;
 }
 
@@ -421,15 +430,16 @@ function findDisplaySurfaceMetrics(
   };
 }
 
-function fitProductToUniformSize(root: THREE.Object3D, targetHeight: number) {
+function fitProductToUniformSize(root: THREE.Object3D, targetSpan: number) {
   root.scale.set(1, 1, 1);
   root.position.set(0, 0, 0);
   root.updateMatrixWorld(true);
 
   const box = new THREE.Box3().setFromObject(root);
   const size = box.getSize(new THREE.Vector3());
-  if (size.y > 0) {
-    root.scale.setScalar(targetHeight / size.y);
+  const visualSpan = Math.max(size.x, size.y, size.z);
+  if (visualSpan > 0) {
+    root.scale.setScalar(targetSpan / visualSpan);
   }
 
   root.updateMatrixWorld(true);

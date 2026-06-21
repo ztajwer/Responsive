@@ -1,6 +1,4 @@
 /** Front-ish view — table face visible, slightly from above */
-import { isCompactProductUrl, PRODUCT_SIZE_OFFSET_PX } from "./modelAssets";
-
 export const TABLE_POLAR_ANGLE = 1.32;
 
 export const TABLE_DISPLAY = {
@@ -122,7 +120,18 @@ function worldSizeFromPixels(
   return (pixels / viewportHeight) * visibleHeight;
 }
 
-/** Product height from counter width — stays on surface, no screen-size override */
+const PRODUCT_SIZE_BOOST_PX = 14;
+
+function getBoostedProductDisplaySize(
+  baseSize: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): number {
+  const cam = getTableCamera(viewportWidth);
+  return baseSize + worldSizeFromPixels(PRODUCT_SIZE_BOOST_PX, viewportHeight, cam.fov, cam.position[2]);
+}
+
+/** Product height from counter width — one target span for equal on-screen presence */
 export function getProductDisplaySize(
   viewportWidth: number,
   _viewportHeight: number,
@@ -131,24 +140,8 @@ export function getProductDisplaySize(
   if (!tableTopWidth || tableTopWidth <= 0) return 0.06;
   const mobile = viewportWidth < 768;
   const tablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const factor = mobile ? 0.17 : tablet ? 0.15 : 0.13;
+  const factor = mobile ? 0.19 : tablet ? 0.17 : 0.15;
   return tableTopWidth * factor;
-}
-
-/** Per-model size tweak — ring/bracelet −5px screen, others slightly larger */
-export function getProductDisplaySizeForModel(
-  baseSize: number,
-  modelUrl: string,
-  viewportWidth: number,
-  viewportHeight: number,
-): number {
-  const cam = getTableCamera(viewportWidth);
-  const pxWorld = (px: number) =>
-    worldSizeFromPixels(px, viewportHeight, cam.fov, cam.position[2]);
-
-  const isCompact = isCompactProductUrl(modelUrl);
-  const offsetPx = isCompact ? PRODUCT_SIZE_OFFSET_PX.compact : PRODUCT_SIZE_OFFSET_PX.default;
-  return Math.max(baseSize * 0.72, baseSize + pxWorld(offsetPx));
 }
 
 export interface ProductLayoutItem {
@@ -175,6 +168,7 @@ export function getProductArcLayout(
   const tablePos = getTablePosition(viewportWidth);
   const cam = getTableCamera(viewportWidth);
   const topWidth = tableTopWidth && tableTopWidth > 0 ? tableTopWidth : displaySize * 3.2;
+  const productSize = getBoostedProductDisplaySize(displaySize, viewportWidth, viewportHeight);
   const zBase = forwardZ ?? tablePos[2] + (viewportWidth < 768 ? 0.038 : 0.044);
   const pixelLift = worldSizeFromPixels(
     extraLiftPx,
@@ -196,17 +190,11 @@ export function getProductArcLayout(
     const angle = (t - 0.5) * arcSpan;
     const x = centerX + Math.sin(angle) * radius;
     const zCurve = (1 - Math.cos(angle)) * arcDepth;
-    const itemSize = getProductDisplaySizeForModel(
-      displaySize,
-      url,
-      viewportWidth,
-      viewportHeight,
-    );
     return {
       url,
       position: [x, onTableY, zBase - zCurve],
       rotation: [0, -angle * 0.42, 0],
-      displaySize: itemSize,
+      displaySize: productSize,
     };
   });
 }
@@ -215,7 +203,7 @@ export function getProductArcLayout(
 export function getProductRowLayout(
   surfaceY: number,
   viewportWidth: number,
-  _viewportHeight: number,
+  viewportHeight: number,
   displaySize: number,
   modelUrls: readonly string[],
   tableTopWidth?: number,
@@ -227,6 +215,7 @@ export function getProductRowLayout(
   const mobile = viewportWidth < 768;
   const count = modelUrls.length;
   const tablePos = getTablePosition(viewportWidth);
+  const productSize = getBoostedProductDisplaySize(displaySize, viewportWidth, viewportHeight);
   
   // Calculate spacing using the 20px gap in 3D units if available
   let spacing = gap3D && gap3D > 0 ? (displaySize + gap3D) : 0;
@@ -248,7 +237,7 @@ export function getProductRowLayout(
       url,
       position: [x, surfaceY + liftAboveTable, z],
       rotation: [0, 0, 0],
-      displaySize,
+      displaySize: productSize,
     };
   });
 }
