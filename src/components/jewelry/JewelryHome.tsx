@@ -153,15 +153,15 @@ function colorForTablePart(kind: TablePartKind): THREE.Color {
 
 function materialPropsForPart(kind: TablePartKind) {
   if (kind === "gold") {
-    return { metalness: 0.58, roughness: 0.28, emissiveIntensity: 0.012 };
+    return { metalness: 0.64, roughness: 0.24, emissiveIntensity: 0.018 };
   }
   if (kind === "leg") {
-    return { metalness: 0.28, roughness: 0.44, emissiveIntensity: 0.009 };
+    return { metalness: 0.3, roughness: 0.42, emissiveIntensity: 0.01 };
   }
   if (kind === "top") {
-    return { metalness: 0.26, roughness: 0.36, emissiveIntensity: 0.007 };
+    return { metalness: 0.32, roughness: 0.3, emissiveIntensity: 0.012 };
   }
-  return { metalness: 0.26, roughness: 0.4, emissiveIntensity: 0.008 };
+  return { metalness: 0.3, roughness: 0.36, emissiveIntensity: 0.01 };
 }
 
 /** GPU height gradient — safe for large single-mesh GLB (no CPU vertex loop) */
@@ -181,10 +181,10 @@ function applyHeightGradientMaterial(mesh: THREE.Mesh) {
 
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
-    metalness: 0.3,
-    roughness: 0.36,
+    metalness: 0.34,
+    roughness: 0.32,
     emissive: new THREE.Color(hexToThree(THEME_TABLE.emissive)),
-    emissiveIntensity: 0.006,
+    emissiveIntensity: 0.009,
   });
 
   mat.onBeforeCompile = (shader) => {
@@ -220,11 +220,12 @@ uniform vec3 uBottomColor;`,
         "#include <color_fragment>",
         `#include <color_fragment>
 float t = clamp((vMajWorldPos.y - uMinY) / uHeight, 0.0, 1.0);
+vec3 goldTrim = vec3(0.831, 0.686, 0.216);
 vec3 grad = uBottomColor;
-if (t > 0.92) {
-  grad = uHighlightColor;
+if (t > 0.96) {
+  grad = mix(uHighlightColor, goldTrim, 0.35);
 } else if (t > 0.82) {
-  grad = mix(uTopColor, uHighlightColor, (t - 0.82) / 0.1);
+  grad = mix(uTopColor, uHighlightColor, (t - 0.82) / 0.14);
 } else if (t > 0.5) {
   grad = mix(uPanelColor, uTopColor, (t - 0.5) / 0.32);
 } else {
@@ -234,7 +235,7 @@ diffuseColor.rgb *= grad;`,
       );
   };
 
-  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v11";
+  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v12";
   mesh.material = mat;
 }
 
@@ -758,13 +759,13 @@ function TableBoutiqueLights({
 
   return (
     <>
-      <ambientLight intensity={lowEnd ? 0.5 : 0.46} color={colors.white} />
-      <hemisphereLight args={[colors.tableCream, colors.tablePeach, lowEnd ? 0.3 : 0.38]} />
+      <ambientLight intensity={lowEnd ? 0.52 : 0.5} color={colors.white} />
+      <hemisphereLight args={[colors.tableCream, colors.tablePeach, lowEnd ? 0.34 : 0.42]} />
 
       {/* Key — overhead boutique window */}
       <directionalLight
         position={[0.4, 5.6, 3.1]}
-        intensity={mobile ? 0.88 : 0.96}
+        intensity={mobile ? 0.96 : 1.04}
         color={colors.tablePeach}
       />
 
@@ -790,7 +791,7 @@ function TableBoutiqueLights({
               <spotLight
                 ref={spotRef}
                 position={[0.08, surfaceY + 1.15, 0.78]}
-                intensity={mobile ? 0.62 : 0.78}
+                intensity={mobile ? 0.72 : 0.88}
                 angle={0.48}
                 penumbra={0.94}
                 distance={6}
@@ -807,7 +808,7 @@ function TableBoutiqueLights({
           {/* Counter surface glow */}
           <pointLight
             position={[0, surfaceY + 0.14, 0.57]}
-            intensity={mobile ? 0.52 : 0.64}
+            intensity={mobile ? 0.6 : 0.72}
             color={colors.tableWarm}
             distance={3.4}
             decay={2}

@@ -73,6 +73,89 @@ body {
   animation: gentlePulse 2.8s ease-in-out infinite;
 }
 
+/* Product detail — luxury styling */
+@keyframes productShimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+@keyframes productGlow {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.product-detail-page {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(212, 175, 55, 0.14), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(201, 160, 138, 0.12), transparent 50%),
+    linear-gradient(175deg, #f9f2ea 0%, #faf6f1 38%, #f3e8dc 100%);
+}
+
+.product-detail-frame {
+  position: relative;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 251, 247, 0.65),
+    0 24px 60px rgba(61, 43, 31, 0.1),
+    0 4px 18px rgba(212, 175, 55, 0.08);
+}
+
+.product-detail-frame::before,
+.product-detail-frame::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: rgba(212, 175, 55, 0.55);
+  pointer-events: none;
+}
+
+.product-detail-frame::before {
+  top: 10px;
+  left: 10px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.product-detail-frame::after {
+  bottom: 10px;
+  right: 10px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+.product-inquiry-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.product-inquiry-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 251, 247, 0.45) 50%,
+    transparent 62%
+  );
+  transform: translateX(-120%);
+  animation: productShimmer 3.8s ease-in-out infinite;
+}
+
+.product-ornament-glow {
+  animation: productGlow 4s ease-in-out infinite;
+}
+
 .table-band {
   height: var(--table-band-height);
 }
