@@ -24,7 +24,8 @@ import {
   getTableTarget,
 } from "@/lib/tableDisplay";
 import { extendGltfLoader, getProductModelUrls, getTableModelUrl } from "@/lib/modelAssets";
-import { getProductIdFromModelUrl } from "@/lib/products";
+import { getProductIdFromModelUrl, getProductById } from "@/lib/products";
+import { prefetchProductGlb } from "@/lib/modelPreload";
 import { getShopLayoutCalib } from "@/lib/shopLayoutCalib";
 import { optimizeModelForGpu } from "@/lib/gpuModelOptimize";
 import { colors } from "@/lib/colors";
@@ -522,8 +523,10 @@ const ProductModel = memo(function ProductModel({
       event.stopPropagation();
       setHovered(true);
       gl.domElement.style.cursor = "pointer";
+      const item = getProductById(productId);
+      if (item) prefetchProductGlb(item.modelFile);
     },
-    [gl],
+    [gl, productId],
   );
 
   const handlePointerOut = useCallback(

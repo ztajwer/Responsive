@@ -4,18 +4,20 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
-import { useGLTF } from "@react-three/drei";
 import type { Product } from "@/lib/products";
 import { getAllProducts } from "@/lib/products";
-import { getModelUrl } from "@/lib/modelAssets";
+import { prefetchProductGlb } from "@/lib/modelPreload";
 import { getProductDetailDisplaySize } from "@/lib/productDetailDisplay";
 import { getBoutiquePhoneDisplay, openWhatsAppInquiry } from "@/lib/whatsapp";
 
 const ProductDetailCanvas = dynamic(() => import("@/components/product/ProductDetailCanvas"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[42dvh] min-h-[280px] w-full items-center justify-center lg:h-full lg:min-h-0">
-      <p className="font-display text-sm italic tracking-[0.22em] text-maj-brown/45">Presenting piece…</p>
+    <div className="flex h-full min-h-[280px] w-full items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-maj-gold/25 border-t-maj-gold" />
+        <p className="font-display text-sm italic tracking-[0.22em] text-maj-brown/45">Presenting piece…</p>
+      </div>
     </div>
   ),
 });
@@ -25,42 +27,23 @@ interface ProductDetailViewProps {
 }
 
 export default function ProductDetailView({ product }: ProductDetailViewProps) {
-  const [mounted, setMounted] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(1280);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1280,
+  );
   const phoneDisplay = getBoutiquePhoneDisplay();
   const displaySize = getProductDetailDisplaySize(product, viewportWidth);
   const others = getAllProducts().filter((item) => item.id !== product.id).slice(0, 3);
 
   useEffect(() => {
-    setMounted(true);
+    prefetchProductGlb(product.modelFile);
     const sync = () => setViewportWidth(window.innerWidth);
     sync();
     window.addEventListener("resize", sync);
-    useGLTF.preload(getModelUrl(product.modelFile));
-
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    html.style.overflow = "auto";
-    html.style.height = "auto";
-    body.style.overflow = "auto";
-    body.style.height = "auto";
-    body.style.position = "relative";
-
-    return () => {
-      window.removeEventListener("resize", sync);
-      html.style.overflow = prevHtmlOverflow;
-      html.style.height = "";
-      body.style.overflow = prevBodyOverflow;
-      body.style.height = "";
-      body.style.position = "";
-    };
+    return () => window.removeEventListener("resize", sync);
   }, [product.modelFile]);
 
   return (
-    <div className="product-detail-immersive relative z-[60] min-h-[100dvh] w-full overflow-x-hidden overflow-y-auto overscroll-y-contain text-maj-brown">
-      {/* Boutique interior background — blurred like reference */}
+    <div className="product-detail-immersive relative z-[60] w-full min-h-[100dvh] text-maj-brown">
       <div className="pointer-events-none fixed inset-0 -z-10">
         <Image
           src={viewportWidth < 768 ? "/main_mob_bg.png" : "/background.png"}
@@ -84,20 +67,18 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
         Back to Boutique
       </Link>
 
-      <div className="relative mx-auto flex w-full max-w-[1480px] flex-col pb-28 lg:min-h-[130dvh] lg:flex-row lg:items-stretch lg:pb-0">
-        {/* 3D product stage — compact on mobile so info panel is visible */}
-        <section className="relative flex w-full flex-col justify-center px-3 pb-2 pt-14 sm:px-4 sm:pt-16 lg:min-h-[130dvh] lg:flex-1 lg:px-8 lg:pb-12 lg:pt-20">
-          <div className="relative mx-auto h-[42dvh] min-h-[280px] max-h-[420px] w-full sm:h-[48dvh] sm:max-h-[480px] lg:h-[min(96vh,1120px)] lg:max-h-none lg:min-h-0">
-            {mounted ? <ProductDetailCanvas product={product} displaySize={displaySize} /> : null}
+      <div className="relative mx-auto flex w-full max-w-[1480px] flex-col px-0 pb-32 pt-14 sm:pt-16 lg:flex-row lg:items-start lg:gap-6 lg:px-8 lg:pb-20 lg:pt-20 xl:gap-10">
+        <section className="relative w-full shrink-0 px-3 pt-0 sm:px-4 lg:sticky lg:top-20 lg:flex-1 lg:self-start lg:px-0">
+          <div className="relative mx-auto h-[34dvh] min-h-[220px] max-h-[340px] w-full sm:h-[38dvh] sm:max-h-[380px] lg:h-[min(72vh,760px)] lg:max-h-[760px] lg:min-h-[420px]">
+            <ProductDetailCanvas product={product} displaySize={displaySize} />
           </div>
           <p className="pointer-events-none mt-3 text-center font-sans text-[8px] uppercase tracking-[0.38em] text-maj-brown/42 sm:text-[9px]">
-            Drag to rotate · Scroll to zoom
+            Drag to rotate · Pinch or scroll to zoom · Scroll below for details
           </p>
         </section>
 
-        {/* Info panel — full width below 3D on mobile */}
-        <aside className="product-glass-panel relative z-30 mx-3 mt-2 flex w-[calc(100%-1.5rem)] shrink-0 flex-col sm:mx-5 lg:mx-0 lg:mb-12 lg:mr-6 lg:mt-0 lg:w-[min(100%,460px)] lg:min-h-[min(120dvh,1200px)] lg:self-stretch xl:w-[480px]">
-          <div className="animate-fade-up px-7 py-10 sm:px-9 sm:py-12 lg:px-10 lg:py-16">
+        <aside className="product-glass-panel relative z-30 mx-3 mb-10 mt-4 w-[calc(100%-1.5rem)] shrink-0 sm:mx-5 lg:mx-0 lg:mb-16 lg:mt-0 lg:w-[min(100%,460px)] xl:w-[480px]">
+          <div className="animate-fade-up px-7 py-10 sm:px-9 sm:py-12 lg:px-10 lg:py-14">
             <p className="font-sans text-[10px] uppercase tracking-[0.48em] text-maj-brown/50 sm:text-[11px]">
               {product.category}
             </p>

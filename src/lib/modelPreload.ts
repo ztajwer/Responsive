@@ -1,4 +1,9 @@
-import { extendGltfLoader, getProductModelUrls, getTableModelUrl } from "./modelAssets";
+import {
+  extendGltfLoader,
+  getModelUrl,
+  getProductModelUrls,
+  getTableModelUrl,
+} from "./modelAssets";
 import { getDeviceProfile } from "./deviceProfile";
 
 const bytePrefetched = new Set<string>();
@@ -74,6 +79,15 @@ export function prefetchProductBytes(index: number) {
   const urls = getProductModelUrls();
   const url = urls[Math.min(Math.max(index, 0), urls.length - 1)];
   if (url) warmHttpCache(url);
+}
+
+/** Detail page — HTTP warm + GLTF parse for one product. */
+export function prefetchProductGlb(modelFile: string) {
+  const url = getModelUrl(modelFile);
+  warmHttpCache(url);
+  void getDrei().then(({ useGLTF }) => {
+    triggerGltfPreload(useGLTF, url);
+  });
 }
 
 export function prefetchNextProductBytes(index: number) {
