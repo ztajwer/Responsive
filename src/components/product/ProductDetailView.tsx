@@ -90,68 +90,68 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
         </section>
 
         {/* Right — glass info panel */}
-        <aside className="product-glass-panel relative z-20 mx-3 mb-28 mt-2 flex shrink-0 flex-col sm:mx-5 lg:mx-0 lg:mb-10 lg:mr-6 lg:mt-0 lg:w-[min(100%,420px)] lg:min-h-[min(92dvh,920px)] lg:self-stretch xl:w-[440px]">
-          <div className="animate-fade-up px-6 py-8 sm:px-8 sm:py-10 lg:py-12">
-            <p className="font-sans text-[9px] uppercase tracking-[0.48em] text-maj-brown/50 sm:text-[10px]">
+        <aside className="product-glass-panel relative z-20 mx-3 mb-32 mt-4 flex shrink-0 flex-col sm:mx-5 lg:mx-0 lg:mb-12 lg:mr-6 lg:mt-0 lg:w-[min(100%,460px)] lg:min-h-[min(120dvh,1200px)] lg:self-stretch xl:w-[480px]">
+          <div className="animate-fade-up px-7 py-10 sm:px-9 sm:py-12 lg:px-10 lg:py-16">
+            <p className="font-sans text-[10px] uppercase tracking-[0.48em] text-maj-brown/50 sm:text-[11px]">
               {product.category}
             </p>
 
-            <h1 className="mt-3 font-display text-[clamp(2rem,7.5vw,2.85rem)] font-light leading-[1.08] tracking-[0.03em] text-maj-brown">
+            <h1 className="mt-4 font-display text-[clamp(2.4rem,8.5vw,3.5rem)] font-light leading-[1.08] tracking-[0.03em] text-maj-brown sm:mt-5">
               {product.title}
             </h1>
 
-            <p className="mt-2 font-display text-[clamp(0.95rem,3.2vw,1.15rem)] font-light italic tracking-[0.1em] text-maj-brown-mid/85">
+            <p className="mt-3 font-display text-[clamp(1.1rem,3.8vw,1.45rem)] font-light italic tracking-[0.1em] text-maj-brown-mid/85">
               {product.tagline}
             </p>
 
-            <div className="my-5 h-px w-full bg-gradient-to-r from-maj-gold/45 via-maj-gold/15 to-transparent sm:my-6" />
+            <div className="my-6 h-px w-full bg-gradient-to-r from-maj-gold/45 via-maj-gold/15 to-transparent sm:my-8" />
 
-            <p className="font-sans text-[12.5px] leading-[1.82] text-maj-brown/78 sm:text-[13.5px] sm:leading-[1.88]">
+            <p className="font-sans text-[14px] leading-[1.88] text-maj-brown/78 sm:text-[15px] sm:leading-[1.95]">
               {product.description}
             </p>
 
-            <p className="mt-5 font-sans text-[9px] uppercase tracking-[0.36em] text-maj-brown/55 sm:mt-6">
+            <p className="mt-6 font-sans text-[10px] uppercase tracking-[0.36em] text-maj-brown/55 sm:mt-8 sm:text-[11px]">
               {product.materials}
             </p>
 
-            <ul className="mt-4 space-y-2">
+            <ul className="mt-5 space-y-3">
               {product.features.map((feature) => (
                 <li
                   key={feature}
-                  className="flex items-start gap-2.5 font-sans text-[12px] leading-relaxed text-maj-brown/72 sm:text-[13px]"
+                  className="flex items-start gap-3 font-sans text-[14px] leading-relaxed text-maj-brown/72 sm:text-[15px]"
                 >
-                  <span className="mt-[7px] h-1 w-1 shrink-0 rotate-45 border border-maj-gold/80 bg-maj-gold/30" />
+                  <span className="mt-[8px] h-1.5 w-1.5 shrink-0 rotate-45 border border-maj-gold/80 bg-maj-gold/30" />
                   {feature}
                 </li>
               ))}
             </ul>
 
-            <div className="mt-7 border-t border-maj-gold/15 pt-6 sm:mt-8">
-              <p className="font-sans text-[9px] uppercase tracking-[0.38em] text-maj-brown/45">Price</p>
-              <p className="mt-2 font-display text-[clamp(1.35rem,5vw,1.75rem)] tracking-[0.05em] text-maj-brown">
+            <div className="mt-9 border-t border-maj-gold/15 pt-8 sm:mt-10">
+              <p className="font-sans text-[10px] uppercase tracking-[0.38em] text-maj-brown/45 sm:text-[11px]">Price</p>
+              <p className="mt-3 font-display text-[clamp(1.6rem,5.5vw,2.1rem)] tracking-[0.05em] text-maj-brown">
                 Contact for Price
               </p>
-              <p className="mt-1 font-sans text-[10px] text-maj-brown/48">{phoneDisplay}</p>
+              <p className="mt-2 font-sans text-[12px] text-maj-brown/48 sm:text-[13px]">{phoneDisplay}</p>
             </div>
 
             <button
               type="button"
               onClick={() => openWhatsAppInquiry(product.title)}
-              className="product-inquiry-gold mt-7 w-full px-8 py-3.5 font-sans text-[11px] uppercase tracking-[0.4em] transition active:scale-[0.99] sm:mt-8"
+              className="product-inquiry-gold mt-9 w-full px-8 py-4 font-sans text-[12px] uppercase tracking-[0.4em] transition active:scale-[0.99] sm:mt-10 sm:py-5 sm:text-[13px]"
             >
               Inquiry
             </button>
 
-            <div className="mt-8 border-t border-maj-gold/12 pt-6">
-              <p className="font-sans text-[9px] uppercase tracking-[0.4em] text-maj-brown/42">
+            <div className="mt-10 border-t border-maj-gold/12 pt-8 sm:mt-12">
+              <p className="font-sans text-[10px] uppercase tracking-[0.4em] text-maj-brown/42 sm:text-[11px]">
                 More from the collection
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-2.5">
                 {others.map((item) => (
                   <Link
                     key={item.id}
                     href={`/product/${item.id}`}
-                    className="rounded-full border border-maj-gold/22 bg-white/40 px-3 py-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-maj-brown/65 transition hover:border-maj-gold/45 hover:bg-white/65 hover:text-maj-gold"
+                    className="rounded-full border border-maj-gold/22 bg-white/40 px-4 py-2 font-sans text-[10px] uppercase tracking-[0.22em] text-maj-brown/65 transition hover:border-maj-gold/45 hover:bg-white/65 hover:text-maj-gold sm:text-[11px]"
                   >
                     {item.title}
                   </Link>
