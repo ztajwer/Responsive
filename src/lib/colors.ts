@@ -1,12 +1,15 @@
 export const colors = {
   gold: "#D4AF37",
   goldLight: "#E8C872",
+  goldDeep: "#C9A04A",
+  goldMuted: "#B8943F",
   roseGold: "#C9A08A",
   roseGoldLight: "#E8C4B8",
   white: "#FFFBF7",
   cream: "#FAF6F1",
   brown: "#3D2B1F",
   brownMid: "#5C4033",
-  table: "#F2D9BC",
-  tableLeg: "#E8C9A8",
+  table: "#F5D4B8",
+  tableTop: "#E3B485",
+  tableLeg: "#E8B898",
 } as const;

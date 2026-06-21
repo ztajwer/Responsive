@@ -3,14 +3,14 @@ export const TABLE_POLAR_ANGLE = 1.32;
 
 export const TABLE_DISPLAY = {
   position: {
-    mobile: [0, -0.02, 0.46] as [number, number, number],
-    tablet: [0, -0.02, 0.44] as [number, number, number],
-    desktop: [0, -0.02, 0.42] as [number, number, number],
+    mobile: [0, -0.04, 0.46] as [number, number, number],
+    tablet: [0, -0.03, 0.44] as [number, number, number],
+    desktop: [0, -0.03, 0.42] as [number, number, number],
   },
   target: {
-    mobile: [0, 0.08, 0.46] as [number, number, number],
-    tablet: [0, 0.07, 0.44] as [number, number, number],
-    desktop: [0, 0.06, 0.42] as [number, number, number],
+    mobile: [0, 0.06, 0.46] as [number, number, number],
+    tablet: [0, 0.05, 0.44] as [number, number, number],
+    desktop: [0, 0.04, 0.42] as [number, number, number],
   },
   scale: {
     mobile: 0.38,
@@ -30,6 +30,35 @@ export const TABLE_DISPLAY = {
   },
   viewOffsetY: { mobile: 0, tablet: 0, desktop: 0 },
 } as const;
+
+/** Calibrated for static PNG counter — table-3d.glb is a full room, not used for layout. */
+export const SHOP_DISPLAY_ANCHOR = {
+  mobile: {
+    surfaceY: 0.058,
+    topWidth: 0.32,
+    forwardZ: 0.508,
+    displaySize: 0.032,
+    viewOffsetY: 0.2,
+  },
+  tablet: {
+    surfaceY: 0.052,
+    topWidth: 0.3,
+    forwardZ: 0.492,
+    displaySize: 0.028,
+    viewOffsetY: 0.15,
+  },
+  desktop: {
+    surfaceY: 0.048,
+    topWidth: 0.28,
+    forwardZ: 0.478,
+    displaySize: 0.026,
+    viewOffsetY: 0.1,
+  },
+} as const;
+
+export function getShopDisplayAnchor(width: number) {
+  return SHOP_DISPLAY_ANCHOR[getTableBreakpoint(width)];
+}
 
 export type TableBreakpoint = "mobile" | "tablet" | "desktop";
 
@@ -62,14 +91,93 @@ export function getTableTarget(width: number) {
 
 export function getTableShadow(width: number) {
   const bp = getTableBreakpoint(width);
+  const tablePos = getTablePosition(width);
   return {
     scale: TABLE_DISPLAY.shadow.scale[bp],
     opacity: TABLE_DISPLAY.shadow.opacity[bp],
     blur: TABLE_DISPLAY.shadow.blur[bp],
-    groundY: TABLE_DISPLAY.shadow.groundY,
+    groundY: tablePos[1] + 0.082,
   };
 }
 
 export function getTableViewOffsetY(width: number, _height = width) {
   return TABLE_DISPLAY.viewOffsetY[getTableBreakpoint(width)];
+}
+
+function clampRange(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function worldSizeFromPixels(
+  pixels: number,
+  viewportHeight: number,
+  cameraFov: number,
+  cameraDistance: number,
+): number {
+  if (viewportHeight <= 0 || cameraDistance <= 0) return 0.12;
+  const vFov = (cameraFov * Math.PI) / 180;
+  const visibleHeight = 2 * Math.tan(vFov / 2) * cameraDistance;
+  return (pixels / viewportHeight) * visibleHeight;
+}
+
+/** Product height from counter width — stays on surface, no screen-size override */
+export function getProductDisplaySize(
+  viewportWidth: number,
+  _viewportHeight: number,
+  tableTopWidth?: number,
+): number {
+  if (!tableTopWidth || tableTopWidth <= 0) return 0.06;
+  const mobile = viewportWidth < 768;
+  const tablet = viewportWidth >= 768 && viewportWidth < 1024;
+  const factor = mobile ? 0.22 : tablet ? 0.2 : 0.18;
+  return tableTopWidth * factor;
+}
+
+export interface ProductLayoutItem {
+  url: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  displaySize: number;
+}
+
+/** Straight row — equal spacing on table top, centered with optional pixel-calibrated 3D gap */
+export function getProductRowLayout(
+  surfaceY: number,
+  viewportWidth: number,
+  _viewportHeight: number,
+  displaySize: number,
+  modelUrls: readonly string[],
+  tableTopWidth?: number,
+  forwardZ?: number,
+  centerX = 0,
+  liftAboveTable = 0.002,
+  gap3D?: number,
+): ProductLayoutItem[] {
+  const mobile = viewportWidth < 768;
+  const count = modelUrls.length;
+  const tablePos = getTablePosition(viewportWidth);
+  
+  // Calculate spacing using the 20px gap in 3D units if available
+  let spacing = gap3D && gap3D > 0 ? (displaySize + gap3D) : 0;
+  
+  // Constrain total row span to fit within the table boundaries
+  const maxRowSpan = tableTopWidth && tableTopWidth > 0 ? tableTopWidth * 0.82 : displaySize * 3.0;
+  
+  if (spacing === 0 || spacing * (count - 1) > maxRowSpan) {
+    const rowSpan = tableTopWidth && tableTopWidth > 0 ? tableTopWidth * 0.76 : displaySize * 2.4;
+    spacing = count > 1 ? rowSpan / (count - 1) : 0;
+  }
+
+  const totalWidth = spacing * (count - 1);
+  const z = forwardZ ?? tablePos[2] + (mobile ? 0.038 : 0.044);
+
+  return modelUrls.map((url, index) => {
+    const x = centerX - totalWidth / 2 + index * spacing;
+    return {
+      url,
+      position: [x, surfaceY + liftAboveTable, z],
+      rotation: [0, 0, 0],
+      displaySize,
+    };
+  });
 }

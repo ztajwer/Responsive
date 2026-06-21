@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import { LoadingProvider } from "@/context/LoadingContext";
 import Loader from "./Loader";
 import DoorBackground from "./DoorBackground";
-import BrightnessWash from "./BrightnessWash";
 import UIOverlay from "./UIOverlay";
 import ScrollOpenModal from "./ScrollOpenModal";
 import DoorChimeAudio from "./DoorChimeAudio";
@@ -17,7 +16,6 @@ import {
   startBoutiqueAudioFromGesture,
   stopBoutiqueAudio,
 } from "@/lib/boutiqueAudio";
-import { warmShopExperienceModule, prefetchShopBytesOnDoor } from "@/lib/modelPreload";
 import { getDeviceProfile } from "@/lib/deviceProfile";
 import { useScrollDoorProgress } from "@/hooks/useScrollDoorProgress";
 
@@ -35,7 +33,6 @@ function ExperienceInner() {
     progressRef,
     doorProgress,
     entered,
-    brightness,
     canvasOpacity,
     scrollHeight,
     getOpenDistance,
@@ -87,14 +84,12 @@ function ExperienceInner() {
 
   useEffect(() => {
     if (!ready || entered || doorProgress < 0.35) return;
-    prefetchShopBytesOnDoor();
-    warmShopExperienceModule();
+    void import("@/lib/modelPreload").then((mod) => mod.prefetchShopBytesOnDoor());
   }, [ready, entered, doorProgress]);
 
   useEffect(() => {
     if (!ready) return;
     preloadBoutiqueAudio();
-    warmShopExperienceModule();
   }, [ready]);
 
   useEffect(() => {
@@ -157,12 +152,11 @@ function ExperienceInner() {
       {onDoorScreen && (
         <DoorSceneCanvas
           progressRef={progressRef}
-          brightness={brightness}
+          brightness={0}
           opacity={doorOpacity}
         />
       )}
 
-      {onDoorScreen && <BrightnessWash intensity={brightness} />}
       {onDoorScreen && (
         <ScrollOpenModal open={scrollModalOpen} onClose={closeScrollModal} />
       )}

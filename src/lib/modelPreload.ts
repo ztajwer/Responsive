@@ -1,5 +1,3 @@
-"use client";
-
 import { getProductModelUrls, getTableModelUrl } from "./modelAssets";
 
 const bytePrefetched = new Set<string>();
@@ -54,27 +52,33 @@ export function bootFastPipeline() {
   for (const src of [...LOADER_IMAGES, ...DOOR_IMAGES, ...SHOP_IMAGES]) {
     preloadImage(src);
   }
-
-  warmShopExperienceModule();
 }
 
-/** Door scroll: reinforce table download only. */
+/** Door scroll: warm shop images + table bytes. */
 export function prefetchShopBytesOnDoor() {
   prefetchTableBytes();
+  for (const src of SHOP_IMAGES) preloadImage(src);
 }
 
-/** Shop opens: table bytes + code — NO product downloads yet. */
+/** Shop opens: table GLB first, then first two product files. */
 export function startShopModelLoads() {
   if (shopStarted) return;
   shopStarted = true;
 
   prefetchTableBytes();
-  warmShopExperienceModule();
+  prefetchProductBytes(0);
+  window.setTimeout(() => prefetchProductBytes(1), 400);
 }
 
-/** After table renders, queue first product bytes. */
+export function prefetchAllProductBytes() {
+  getProductModelUrls().forEach((_, index) => {
+    window.setTimeout(() => prefetchProductBytes(index), index * 320);
+  });
+}
+
+/** After table renders, queue all product files. */
 export function onTableReadyForProducts() {
-  prefetchProductBytes(0);
+  prefetchAllProductBytes();
 }
 
 export function bootShopModels() {
@@ -100,9 +104,4 @@ export function scheduleIdle(task: () => void) {
     return;
   }
   window.setTimeout(task, 150);
-}
-
-export function warmShopExperienceModule() {
-  void import("@/components/jewelry/ShopExperience");
-  void import("@/components/jewelry/JewelryHome");
 }

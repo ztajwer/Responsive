@@ -12,24 +12,22 @@ import {
 import * as THREE from "three";
 import {
   TABLE_POLAR_ANGLE,
+  getProductDisplaySize,
+  getProductRowLayout,
+  getShopDisplayAnchor,
   getTableCamera,
   getTablePosition,
   getTableScale,
   getTableShadow,
   getTableTarget,
 } from "@/lib/tableDisplay";
-import {
-  getProductDisplaySize,
-  getProductRowLayout,
-} from "@/lib/productDisplay";
-import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
+import { extendGltfLoader, getProductModelUrls, getTableModelUrl } from "@/lib/modelAssets";
+import { getShopLayoutCalib } from "@/lib/shopLayoutCalib";
 import { optimizeModelForGpu } from "@/lib/gpuModelOptimize";
-import { prefetchNextProductBytes, onTableReadyForProducts } from "@/lib/modelPreload";
+import { colors } from "@/lib/colors";
 import {
   getDeviceProfile,
   getMaxShopProducts,
-  getProductStaggerMs,
-  getProductStartDelayMs,
   type DeviceProfile,
 } from "@/lib/deviceProfile";
 
@@ -40,55 +38,253 @@ interface JewelryHomeProps {
 
 const tableViewOffsetRef = { width: 0, height: 0, offsetY: 0 };
 
-/** Medium table — lower on screen, front view */
-const TABLE_HEIGHT_FRACTION = 0.3;
-const TABLE_CENTER_NDC_TARGET = -0.42;
-const LOAD_TIMEOUT_MS = 90000;
-const HOVER_LIFT = 0.044;
-const HOVER_SCALE = 1.12;
-
-function getTableCenterY(root: THREE.Object3D, tablePos: [number, number, number]) {
-  const box = new THREE.Box3().setFromObject(root);
-  return tablePos[1] + (box.min.y + box.max.y) / 2;
-}
-
-function resolveTableViewOffsetY(
+/** Binary-search group Y so table base lands on target screen NDC (no viewOffset). */
+function alignTableBottomToNdc(
   camera: THREE.PerspectiveCamera,
-  width: number,
-  height: number,
-  tablePos: [number, number, number],
-  tableCenterY: number,
-) {
+  tableZ: number,
+  targetNdcY: number,
+): { groupY: number; projectedNdcY: number } {
+  camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+
   const anchor = new THREE.Vector3();
-  let low = -0.12;
-  let high = 0.45;
+  let low = -2.2;
+  let high = 0.6;
 
-  for (let i = 0; i < 22; i++) {
+  for (let i = 0; i < 28; i++) {
     const mid = (low + high) / 2;
-    camera.setViewOffset(width, height, 0, height * mid, width, height);
-    camera.updateProjectionMatrix();
-    anchor.set(0, tableCenterY, tablePos[2]).project(camera);
-
-    if (anchor.y > TABLE_CENTER_NDC_TARGET) {
+    anchor.set(0, mid, tableZ).project(camera);
+    if (anchor.y > targetNdcY) {
       high = mid;
     } else {
       low = mid;
     }
   }
 
-  const offsetY = (low + high) / 2;
-  camera.setViewOffset(width, height, 0, height * offsetY, width, height);
-  camera.updateProjectionMatrix();
+  const groupY = (low + high) / 2;
+  anchor.set(0, groupY, tableZ).project(camera);
 
-  tableViewOffsetRef.width = width;
-  tableViewOffsetRef.height = height;
-  tableViewOffsetRef.offsetY = offsetY;
+  tableViewOffsetRef.width = 0;
+  tableViewOffsetRef.height = 0;
+  tableViewOffsetRef.offsetY = 0;
 
-  return offsetY;
+  return { groupY, projectedNdcY: anchor.y };
 }
 
-/** Keep GLB-authored colors; only disable shadows for GPU stability. */
-function prepareOriginalMaterials(root: THREE.Object3D) {
+/** Re-applies PNG alignment every frame — drei PerspectiveCamera clears view offset otherwise */
+function ViewOffsetMaintainer() {
+  const { camera, size } = useThree();
+
+  useFrame(() => {
+    if (!(camera instanceof THREE.PerspectiveCamera)) return;
+
+    const ref = tableViewOffsetRef;
+    if (ref.offsetY <= 0 || ref.width !== size.width || ref.height !== size.height) {
+      if (camera.view) {
+        camera.clearViewOffset();
+        camera.updateProjectionMatrix();
+      }
+      return;
+    }
+
+    camera.setViewOffset(
+      ref.width,
+      ref.height,
+      0,
+      ref.height * ref.offsetY,
+      ref.width,
+      ref.height,
+    );
+    camera.updateProjectionMatrix();
+  });
+
+  return null;
+}
+
+const LOAD_TIMEOUT_MS = 90000;
+const HOVER_LIFT = 0.014;
+const HOVER_SCALE = 1.07;
+
+const THEME_TABLE = {
+  top: colors.goldLight,
+  leg: colors.goldDeep,
+  gold: colors.gold,
+  rose: colors.goldMuted,
+  panel: colors.gold,
+  emissive: colors.brownMid,
+} as const;
+
+function hexToThree(hex: string) {
+  return Number.parseInt(hex.replace("#", ""), 16);
+}
+
+type TablePartKind = "leg" | "panel" | "top" | "gold" | "body";
+
+function resolveTablePartFromName(name: string): TablePartKind | null {
+  if (/glass|pane|window|transparent|diamond|gem|jewel/i.test(name)) return null;
+  if (/metal|gold|brass|handle|trim|border|edge|frame|ring|knob|rail/i.test(name)) return "gold";
+  if (/leg|base|stand|foot|pedestal|pillar|column/i.test(name)) return "leg";
+  if (/top|counter|surface|velvet|tray|pad|display|mat|shelf|table/i.test(name)) return "top";
+  if (/panel|rib|flute|body|support|structure|wood|cabinet|drawer/i.test(name)) return "panel";
+  return null;
+}
+
+function colorForTablePart(kind: TablePartKind): THREE.Color {
+  switch (kind) {
+    case "leg":
+      return new THREE.Color(hexToThree(THEME_TABLE.leg));
+    case "panel":
+      return new THREE.Color(hexToThree(THEME_TABLE.panel));
+    case "top":
+      return new THREE.Color(hexToThree(THEME_TABLE.top));
+    case "gold":
+      return new THREE.Color(hexToThree(THEME_TABLE.gold));
+    case "body":
+      return new THREE.Color(hexToThree(THEME_TABLE.rose));
+    default:
+      return new THREE.Color(hexToThree(THEME_TABLE.panel));
+  }
+}
+
+function materialPropsForPart(kind: TablePartKind) {
+  if (kind === "gold") {
+    return { metalness: 0.78, roughness: 0.2, emissiveIntensity: 0.09 };
+  }
+  if (kind === "leg") {
+    return { metalness: 0.48, roughness: 0.34, emissiveIntensity: 0.03 };
+  }
+  if (kind === "top") {
+    return { metalness: 0.44, roughness: 0.24, emissiveIntensity: 0.06 };
+  }
+  return { metalness: 0.52, roughness: 0.28, emissiveIntensity: 0.04 };
+}
+
+/** Height + radial bands when GLB is one mesh — legs, panels, top, gold rim */
+function paintMeshVertexColors(mesh: THREE.Mesh) {
+  const geometry = mesh.geometry;
+  const position = geometry.attributes.position;
+  if (!position) return;
+
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox;
+  if (!box) return;
+
+  const minY = box.min.y;
+  const maxY = box.max.y;
+  const height = Math.max(maxY - minY, 0.0001);
+  const center = box.getCenter(new THREE.Vector3());
+  const maxRadial = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) * 0.5;
+
+  const leg = colorForTablePart("leg");
+  const panel = colorForTablePart("panel");
+  const top = colorForTablePart("top");
+  const gold = colorForTablePart("gold");
+
+  const colorsAttr = new Float32Array(position.count * 3);
+  const vertex = new THREE.Vector3();
+  const mix = new THREE.Color();
+
+  for (let i = 0; i < position.count; i++) {
+    vertex.fromBufferAttribute(position, i);
+    const t = (vertex.y - minY) / height;
+    const radial = maxRadial > 0 ? Math.hypot(vertex.x - center.x, vertex.z - center.z) / maxRadial : 0;
+
+    if (t < 0.2) {
+      mix.copy(leg);
+    } else if (t > 0.9 && radial > 0.78) {
+      mix.copy(gold);
+    } else if (t > 0.84) {
+      mix.copy(top);
+    } else if (t > 0.52) {
+      mix.copy(panel).lerp(top, (t - 0.52) / 0.32);
+    } else {
+      mix.copy(leg).lerp(panel, (t - 0.2) / 0.32);
+    }
+
+    colorsAttr[i * 3] = mix.r;
+    colorsAttr[i * 3 + 1] = mix.g;
+    colorsAttr[i * 3 + 2] = mix.b;
+  }
+
+  geometry.setAttribute("color", new THREE.BufferAttribute(colorsAttr, 3));
+}
+
+function makeThemedTableMaterial(kind: TablePartKind) {
+  const props = materialPropsForPart(kind);
+  const mat = new THREE.MeshStandardMaterial({
+    color: colorForTablePart(kind),
+    metalness: props.metalness,
+    roughness: props.roughness,
+    emissive: new THREE.Color(hexToThree(THEME_TABLE.emissive)),
+    emissiveIntensity: props.emissiveIntensity,
+  });
+  mat.vertexColors = false;
+  return mat;
+}
+
+/** Per-part boutique colors — mesh names when available, vertex bands for single-mesh GLB */
+function applyTableSurfaceColor(root: THREE.Object3D) {
+  let meshCount = 0;
+  let namedParts = 0;
+  let vertexPainted = 0;
+
+  root.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.visible) return;
+    meshCount += 1;
+
+    const name = `${mesh.name} ${mesh.parent?.name || ""}`.toLowerCase();
+    if (/glass|pane|window|transparent|diamond|gem|jewel/i.test(name)) return;
+
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+
+    const namedPart = resolveTablePartFromName(name);
+    if (namedPart) {
+      namedParts += 1;
+      const mat = makeThemedTableMaterial(namedPart);
+      mesh.material = mat;
+      return;
+    }
+
+    paintMeshVertexColors(mesh);
+    vertexPainted += 1;
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      vertexColors: true,
+      metalness: 0.46,
+      roughness: 0.24,
+      emissive: new THREE.Color(hexToThree(THEME_TABLE.emissive)),
+      emissiveIntensity: 0.05,
+    });
+    mesh.material = mat;
+  });
+
+  // #region agent log
+  fetch("http://127.0.0.1:7546/ingest/d5576b71-b65a-49e0-8325-492d4225924a", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "852111" },
+    body: JSON.stringify({
+      sessionId: "852111",
+      runId: "golden-all-products",
+      hypothesisId: "H-parts",
+      location: "JewelryHome.tsx:applyTableSurfaceColor",
+      message: "Part-based table colors",
+      data: { meshCount, namedParts, vertexPainted, palette: THEME_TABLE },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+}
+
+function toTableLocal(
+  world: [number, number, number],
+  tablePos: [number, number, number],
+): [number, number, number] {
+  return [world[0] - tablePos[0], world[1] - tablePos[1], world[2] - tablePos[2]];
+}
+
+function prepareProductMaterials(root: THREE.Object3D) {
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh) return;
@@ -112,56 +308,136 @@ function fitTableToSize(root: THREE.Object3D, targetSize: number) {
     root.scale.setScalar(targetSize / maxDim);
   }
 
-  root.scale.x *= 1.06;
-  root.scale.z *= 1.04;
-
   root.updateMatrixWorld(true);
   const fitted = new THREE.Box3().setFromObject(root);
   root.position.y -= fitted.min.y;
 }
 
-function measureTableScreenHeightFraction(
-  root: THREE.Object3D,
-  tablePos: [number, number, number],
-  camera: THREE.Camera,
-) {
-  const box = new THREE.Box3().setFromObject(root);
-  const bottom = new THREE.Vector3(0, tablePos[1], tablePos[2]);
-  const top = new THREE.Vector3(0, tablePos[1] + box.max.y, tablePos[2]);
-  bottom.project(camera);
-  top.project(camera);
-  return Math.abs(top.y - bottom.y) / 2;
+function hideRoomKeepCounter(root: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+  const sceneBox = new THREE.Box3().setFromObject(root);
+  const sceneSize = sceneBox.getSize(new THREE.Vector3());
+
+  root.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+
+    const box = new THREE.Box3().setFromObject(mesh);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const width = Math.max(size.x, size.z);
+    const flatness = size.y / Math.max(width, 0.001);
+
+    const isFloor = flatness < 0.06 && width > 1.8 && center.y < sceneBox.min.y + sceneSize.y * 0.1;
+    const isWall = size.y > 2.0 && width > 1.6;
+    const isCeiling = center.y > sceneBox.min.y + sceneSize.y * 0.82;
+
+    mesh.visible = !(isFloor || isWall || isCeiling);
+  });
 }
 
-function scaleTableToScreenBand(
-  root: THREE.Object3D,
-  tablePos: [number, number, number],
-  camera: THREE.Camera,
-  targetFraction: number,
-) {
-  const fraction = measureTableScreenHeightFraction(root, tablePos, camera);
-  if (fraction < 0.001) return;
-
-  root.scale.multiplyScalar(targetFraction / fraction);
-  root.updateMatrixWorld(true);
-
-  const fitted = new THREE.Box3().setFromObject(root);
-  root.position.y -= fitted.min.y;
+interface DisplaySurfaceMetrics {
+  surfaceY: number;
+  topWidth: number;
+  forwardZ: number;
+  centerX: number;
 }
 
-function fitModelToSize(root: THREE.Object3D, targetSize: number) {
-  root.scale.set(1, 1, 1);
-  root.updateMatrixWorld(true);
+/** PNG-calibrated anchor when mesh scan is unreliable (full-room GLB). */
+function resolveProductSurfaceMetrics(
+  anchor: ReturnType<typeof getShopDisplayAnchor>,
+  found: DisplaySurfaceMetrics,
+  alignedY: number,
+  tablePos: [number, number, number],
+): { metrics: DisplaySurfaceMetrics; source: "anchor" | "mesh" } {
+  const meshLooksLikeCounter =
+    found.topWidth >= 0.06 &&
+    found.topWidth <= 0.45 &&
+    found.surfaceY >= 0.035 &&
+    found.surfaceY <= 0.14;
 
-  const box = new THREE.Box3().setFromObject(root);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  root.position.set(-center.x, -box.min.y, -center.z);
-
-  const maxDim = Math.max(size.x, size.y, size.z);
-  if (maxDim > 0) {
-    root.scale.setScalar(targetSize / maxDim);
+  if (meshLooksLikeCounter) {
+    return {
+      source: "mesh",
+      metrics: {
+        surfaceY: alignedY + found.surfaceY,
+        topWidth: found.topWidth,
+        forwardZ: tablePos[2] + found.forwardZ + 0.034,
+        centerX: tablePos[0] + found.centerX,
+      },
+    };
   }
+
+  return {
+    source: "anchor",
+    metrics: {
+      surfaceY: alignedY + anchor.surfaceY,
+      topWidth: anchor.topWidth,
+      forwardZ: anchor.forwardZ + 0.034,
+      centerX: tablePos[0],
+    },
+  };
+}
+
+function findDisplaySurfaceMetrics(
+  root: THREE.Object3D,
+  tablePos: [number, number, number],
+): DisplaySurfaceMetrics {
+  root.updateMatrixWorld(true);
+  const sceneBox = new THREE.Box3().setFromObject(root);
+  const sceneSize = sceneBox.getSize(new THREE.Vector3());
+  const sceneCenter = sceneBox.getCenter(new THREE.Vector3());
+
+  const yMin = sceneBox.min.y + sceneSize.y * 0.04;
+  const yMax = sceneBox.min.y + sceneSize.y * 0.5;
+
+  let best: DisplaySurfaceMetrics | null = null;
+  let bestScore = -Infinity;
+
+  root.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.visible) return;
+
+    const box = new THREE.Box3().setFromObject(mesh);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const topY = box.max.y;
+
+    if (topY < yMin || center.y > yMax) return;
+
+    const width = Math.max(size.x, size.z);
+    const flatness = size.y / Math.max(width, 0.001);
+    if (flatness > 0.55 || width < 0.035) return;
+
+    let score = width * 8;
+    score -= Math.abs(center.x - sceneCenter.x) * 12;
+    score -= Math.abs(center.z - tablePos[2]) * 8;
+    score -= center.y * 6;
+
+    const name = `${mesh.name} ${mesh.parent?.name || ""}`.toLowerCase();
+    if (/glass|pane/i.test(name)) score -= 50;
+    if (/velvet|tray|pad|display|inner|shelf|mat/i.test(name)) score += 36;
+    if (/glass|counter|table|display|velvet|top|tray|round|circle|stand|pad/i.test(name)) score += 24;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = {
+        surfaceY: topY,
+        topWidth: width,
+        forwardZ: center.z,
+        centerX: center.x,
+      };
+    }
+  });
+
+  if (best) return best;
+
+  return {
+    surfaceY: sceneBox.min.y + sceneSize.y * 0.32,
+    topWidth: Math.min(sceneSize.x, sceneSize.z) * 0.5,
+    forwardZ: sceneCenter.z,
+    centerX: sceneCenter.x,
+  };
 }
 
 function fitProductToUniformSize(root: THREE.Object3D, targetHeight: number) {
@@ -324,8 +600,14 @@ const ProductModel = memo(function ProductModel({
 
   useLayoutEffect(() => {
     fitProductToUniformSize(productRoot, displaySize);
-    prepareOriginalMaterials(productRoot);
-    optimizeModelForGpu(productRoot, textureMax);
+    prepareProductMaterials(productRoot);
+    productRoot.traverse((child) => {
+      const mesh = child as THREE.Mesh;
+      if (mesh.isMesh) mesh.renderOrder = 12;
+    });
+    if (textureMax <= 512) {
+      optimizeModelForGpu(productRoot, textureMax);
+    }
 
     const box = new THREE.Box3().setFromObject(productRoot);
     const size = box.getSize(new THREE.Vector3());
@@ -381,7 +663,7 @@ const ProductModel = memo(function ProductModel({
         onPointerDown={handlePointerDown}
         visible={false}
       >
-        <boxGeometry args={[bounds.radius * 2.35, bounds.height * 1.12, bounds.radius * 2.35]} />
+        <boxGeometry args={[bounds.radius * 2.8, bounds.height * 1.25, bounds.radius * 2.8]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
@@ -395,48 +677,89 @@ const ProductModel = memo(function ProductModel({
 function TableProducts({
   surfaceY,
   tableTopWidth,
+  forwardZ,
+  centerX,
+  tablePos,
   profile,
 }: {
   surfaceY: number;
   tableTopWidth: number;
+  forwardZ: number;
+  centerX: number;
+  tablePos: [number, number, number];
   profile: DeviceProfile;
 }) {
-  const { size } = useThree();
+  const { size, viewport } = useThree();
   const maxProducts = getMaxShopProducts(profile);
   const textureMax = profile.lowEnd ? 512 : profile.mobile ? 768 : 1024;
   const showGlitter = !profile.lowEnd;
+  const calib = getShopLayoutCalib(size.width);
   const displaySize = useMemo(
     () => getProductDisplaySize(size.width, size.height, tableTopWidth),
     [size.width, size.height, tableTopWidth],
   );
+  // Calculate a 20px gap in 3D coordinates based on current window pixel width and viewport bounds
+  const gap3D = useMemo(() => {
+    return (20 * viewport.width) / size.width;
+  }, [viewport.width, size.width]);
+
   const layout = useMemo(
-    () => getProductRowLayout(surfaceY, size.width, size.height, displaySize, tableTopWidth).slice(0, maxProducts),
-    [surfaceY, size.width, size.height, displaySize, tableTopWidth, maxProducts],
+    () =>
+      getProductRowLayout(
+        surfaceY,
+        size.width,
+        size.height,
+        displaySize,
+        getProductModelUrls(),
+        tableTopWidth,
+        forwardZ,
+        centerX,
+        calib.productLift,
+        gap3D,
+      ).slice(0, maxProducts),
+    [surfaceY, size.width, size.height, displaySize, tableTopWidth, forwardZ, centerX, maxProducts, calib.productLift, gap3D],
   );
-  const [visibleCount, setVisibleCount] = useState(1);
-  const staggerMs = getProductStaggerMs(profile);
 
   useEffect(() => {
-    if (visibleCount >= layout.length) return;
-    const id = window.setTimeout(() => {
-      prefetchNextProductBytes(visibleCount);
-      setVisibleCount((count) => count + 1);
-    }, staggerMs);
-    return () => window.clearTimeout(id);
-  }, [visibleCount, layout.length, staggerMs]);
+    void import("@/lib/modelPreload").then((mod) => mod.prefetchAllProductBytes());
+  }, []);
 
-  const visibleLayout = useMemo(
-    () => layout.slice(0, visibleCount),
-    [layout, visibleCount],
-  );
+  useEffect(() => {
+    if (layout.length === 0) return;
+    const first = layout[0];
+    // #region agent log
+    fetch("http://127.0.0.1:7546/ingest/d5576b71-b65a-49e0-8325-492d4225924a", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "852111" },
+      body: JSON.stringify({
+        sessionId: "852111",
+        runId: "golden-all-products",
+        hypothesisId: "H-products",
+        location: "JewelryHome.tsx:TableProducts",
+        message: "All products on table",
+        data: {
+          totalProducts: layout.length,
+          maxProducts,
+          displaySize,
+          surfaceY,
+          forwardZ,
+          tableTopWidth,
+          firstWorldPos: first.position,
+          firstLocalPos: toTableLocal(first.position, tablePos),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [layout, displaySize, surfaceY, forwardZ, tablePos, maxProducts]);
 
   return (
     <group>
-      {visibleLayout.map((item) => (
+      {layout.map((item) => (
         <Suspense key={item.url} fallback={null}>
           <ProductModel
             url={item.url}
-            position={item.position}
+            position={toTableLocal(item.position, tablePos)}
             rotation={item.rotation}
             displaySize={item.displaySize}
             showGlitter={showGlitter}
@@ -460,22 +783,6 @@ function ResponsiveCamera() {
     camera.near = 0.05;
     camera.far = 100;
     camera.lookAt(...target);
-
-    if (
-      tableViewOffsetRef.width === size.width &&
-      tableViewOffsetRef.height === size.height &&
-      tableViewOffsetRef.offsetY > 0
-    ) {
-      camera.setViewOffset(
-        size.width,
-        size.height,
-        0,
-        size.height * tableViewOffsetRef.offsetY,
-        size.width,
-        size.height,
-      );
-    }
-
     camera.updateProjectionMatrix();
   }, [camera, size.width, size.height, cam.fov, cam.position, target]);
 
@@ -488,11 +795,13 @@ function TableModel({
   onReady,
   onSurfaceY,
   onTableMetrics,
+  showProducts,
   profile,
 }: {
   onReady: () => void;
   onSurfaceY: (y: number) => void;
-  onTableMetrics: (metrics: { topWidth: number }) => void;
+  onTableMetrics: (metrics: { topWidth: number; forwardZ: number; centerX: number }) => void;
+  showProducts: boolean;
   profile: DeviceProfile;
 }) {
   const tableUrl = useMemo(() => getTableModelUrl(), []);
@@ -502,41 +811,93 @@ function TableModel({
   const targetScale = getTableScale(size.width, size.height);
   const tablePos = getTablePosition(size.width);
   const readyRef = useRef(false);
+  const [metrics, setMetrics] = useState<DisplaySurfaceMetrics | null>(null);
+  const [productsReady, setProductsReady] = useState(false);
+  const [groupY, setGroupY] = useState(tablePos[1]);
+
+  useEffect(() => {
+    if (!showProducts) {
+      setProductsReady(false);
+      return;
+    }
+    const id = window.setTimeout(() => setProductsReady(true), 0);
+    return () => window.clearTimeout(id);
+  }, [showProducts, profile]);
 
   useLayoutEffect(() => {
     fitTableToSize(tableRoot, targetScale);
-    prepareOriginalMaterials(tableRoot);
-    if (profile.lowEnd) {
-      optimizeModelForGpu(tableRoot, 512);
-    }
+    hideRoomKeepCounter(tableRoot);
+    applyTableSurfaceColor(tableRoot);
 
+    const calib = getShopLayoutCalib(size.width);
+    let alignedY = tablePos[1];
+
+    let alignResult: { groupY: number; projectedNdcY: number } | null = null;
     if (camera instanceof THREE.PerspectiveCamera) {
-      const centerY = getTableCenterY(tableRoot, tablePos);
-      resolveTableViewOffsetY(camera, size.width, size.height, tablePos, centerY);
-      scaleTableToScreenBand(tableRoot, tablePos, camera, TABLE_HEIGHT_FRACTION);
-      resolveTableViewOffsetY(
-        camera,
-        size.width,
-        size.height,
-        tablePos,
-        getTableCenterY(tableRoot, tablePos),
-      );
+      alignResult = alignTableBottomToNdc(camera, tablePos[2], calib.counterBottomNdc);
+      alignedY = alignResult.groupY + 0.045;
     }
 
-    const box = new THREE.Box3().setFromObject(tableRoot);
-    const surfaceInset = size.width < 768 ? 0.006 : 0.004;
-    onSurfaceY(tablePos[1] + box.max.y - surfaceInset);
-    onTableMetrics({ topWidth: box.max.x - box.min.x });
+    setGroupY(alignedY);
+
+    const anchor = getShopDisplayAnchor(size.width);
+    const found = findDisplaySurfaceMetrics(tableRoot, tablePos);
+    const resolved = resolveProductSurfaceMetrics(anchor, found, alignedY, tablePos);
+    const worldMetrics = resolved.metrics;
+
+    // #region agent log
+    fetch("http://127.0.0.1:7546/ingest/d5576b71-b65a-49e0-8325-492d4225924a", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "852111" },
+      body: JSON.stringify({
+        sessionId: "852111",
+        runId: "parts-products-v2",
+        hypothesisId: "H-position",
+        location: "JewelryHome.tsx:TableModel",
+        message: "Product surface resolved",
+        data: {
+          source: resolved.source,
+          targetNdc: calib.counterBottomNdc,
+          projectedNdcY: alignResult?.projectedNdcY,
+          alignedY,
+          foundSurfaceY: found.surfaceY,
+          worldSurfaceY: worldMetrics.surfaceY,
+          forwardZ: worldMetrics.forwardZ,
+          topWidth: worldMetrics.topWidth,
+          viewportW: size.width,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
+    setMetrics(worldMetrics);
+    onSurfaceY(worldMetrics.surfaceY);
+    onTableMetrics({
+      topWidth: worldMetrics.topWidth,
+      forwardZ: worldMetrics.forwardZ,
+      centerX: worldMetrics.centerX,
+    });
 
     if (!readyRef.current) {
       readyRef.current = true;
       onReady();
     }
-  }, [tableRoot, targetScale, tablePos, size.width, size.height, camera, onReady, onSurfaceY, onTableMetrics, profile.lowEnd]);
+  }, [tableRoot, targetScale, tablePos, size.width, size.height, camera, onReady, onSurfaceY, onTableMetrics]);
 
   return (
-    <group ref={groupRef} position={tablePos}>
+    <group ref={groupRef} position={[tablePos[0], groupY, tablePos[2]]}>
       <primitive object={tableRoot} />
+      {metrics && productsReady && (
+        <TableProducts
+          surfaceY={metrics.surfaceY}
+          tableTopWidth={metrics.topWidth}
+          forwardZ={metrics.forwardZ}
+          centerX={metrics.centerX}
+          tablePos={[tablePos[0], groupY, tablePos[2]]}
+          profile={profile}
+        />
+      )}
     </group>
   );
 }
@@ -551,30 +912,17 @@ function TableScene({
   profile: DeviceProfile;
 }) {
   const [surfaceY, setSurfaceY] = useState<number | null>(null);
-  const [tableTopWidth, setTableTopWidth] = useState<number | null>(null);
-  const [productsReady, setProductsReady] = useState(false);
   const handleSurfaceY = useCallback((y: number) => setSurfaceY(y), []);
-  const handleTableMetrics = useCallback(
-    (metrics: { topWidth: number }) => setTableTopWidth(metrics.topWidth),
-    [],
-  );
+  const handleTableMetrics = useCallback(() => {}, []);
   const { size } = useThree();
   const target = getTableTarget(size.width);
   const shadow = getTableShadow(size.width);
   const mobile = size.width < 768;
 
-  useEffect(() => {
-    if (!showProducts) {
-      setProductsReady(false);
-      return;
-    }
-    const id = window.setTimeout(() => setProductsReady(true), getProductStartDelayMs(profile));
-    return () => window.clearTimeout(id);
-  }, [showProducts, profile]);
-
   return (
     <>
       <ResponsiveCamera />
+      <ViewOffsetMaintainer />
 
       <OrbitControls
         makeDefault
@@ -590,18 +938,18 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.68 : 0.64} color="#FFFCF8" />
-      <hemisphereLight args={["#FFFCFA", "#8A6848", mobile ? 0.36 : 0.34]} />
+      <ambientLight intensity={mobile ? 0.72 : 0.68} color="#FFFCF8" />
+      <hemisphereLight args={[colors.white, colors.goldLight, mobile ? 0.38 : 0.34]} />
 
       <directionalLight
         position={[0.2, 4.8, 2.8]}
-        intensity={mobile ? 0.62 : 0.66}
+        intensity={mobile ? 0.68 : 0.72}
         color="#FFF8F2"
       />
 
       <directionalLight
         position={[-0.35, 2.2, 1.05]}
-        intensity={mobile ? 0.34 : 0.38}
+        intensity={mobile ? 0.46 : 0.52}
         color="#FFF6EC"
       />
 
@@ -610,6 +958,7 @@ function TableScene({
           onReady={onReady}
           onSurfaceY={handleSurfaceY}
           onTableMetrics={handleTableMetrics}
+          showProducts={showProducts}
           profile={profile}
         />
       </Suspense>
@@ -621,10 +970,6 @@ function TableScene({
           color="#FFF9EE"
           distance={4.2}
         />
-      )}
-
-      {surfaceY !== null && tableTopWidth !== null && productsReady && (
-        <TableProducts surfaceY={surfaceY} tableTopWidth={tableTopWidth} profile={profile} />
       )}
 
       {!profile.lowEnd && (
@@ -663,7 +1008,7 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
   const handleReady = useCallback(() => {
     setTableReady(true);
     setLoadSlow(false);
-    onTableReadyForProducts();
+    void import("@/lib/modelPreload").then((mod) => mod.onTableReadyForProducts());
     onTableReady?.();
   }, [onTableReady]);
 
@@ -722,12 +1067,12 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
 
       <Canvas
         shadows={false}
-        dpr={1}
+        dpr={profile.lowEnd ? 1 : profile.mobile ? 1.25 : 1.5}
         className="h-full w-full"
         gl={{
-          antialias: false,
+          antialias: !profile.lowEnd,
           alpha: true,
-          powerPreference: "default",
+          powerPreference: profile.lowEnd ? "default" : "high-performance",
           stencil: false,
           depth: true,
           preserveDrawingBuffer: false,
@@ -736,7 +1081,7 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
           gl.setClearColor(0x000000, 0);
           gl.shadowMap.enabled = false;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = profile.mobile ? 1.06 : 1.04;
+          gl.toneMappingExposure = 1.08;
           gl.domElement.addEventListener(
             "webglcontextlost",
             (e) => {

@@ -26,9 +26,7 @@ export function getDeviceProfile(): DeviceProfile {
   return { mobile, lowEnd };
 }
 
-export function getMaxShopProducts(profile: DeviceProfile): number {
-  if (profile.lowEnd) return 3;
-  if (profile.mobile) return 4;
+export function getMaxShopProducts(_profile: DeviceProfile): number {
   return 5;
 }
 

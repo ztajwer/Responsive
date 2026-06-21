@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { startShopModelLoads } from "@/lib/modelPreload";
+import { useEffect } from "react";
 import JewelryHome from "./JewelryHome";
 
 interface ShopExperienceProps {
@@ -9,34 +8,20 @@ interface ShopExperienceProps {
 }
 
 export default function ShopExperience({ visible }: ShopExperienceProps) {
-  const [sceneReady, setSceneReady] = useState(false);
-
   useEffect(() => {
-    if (visible) startShopModelLoads();
-    else setSceneReady(false);
+    if (!visible) return;
+    void import("@/lib/modelPreload").then((mod) => mod.startShopModelLoads());
   }, [visible]);
-
-  const handleTableReady = useCallback(() => {
-    setSceneReady(true);
-  }, []);
 
   if (!visible) return null;
 
   return (
     <div className="shop-experience fixed inset-0 z-[40] overflow-hidden">
-      <div
-        className="shop-experience-bg"
-        aria-hidden
-        style={{
-          opacity: sceneReady ? 0 : 1,
-          transition: "opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1)",
-          pointerEvents: "none",
-        }}
-      >
+      <div className="shop-experience-bg" aria-hidden style={{ pointerEvents: "none" }}>
         <div className="shop-experience-bg__zoom" />
       </div>
 
-      <JewelryHome visible={visible} onTableReady={handleTableReady} />
+      <JewelryHome visible={visible} />
     </div>
   );
 }
