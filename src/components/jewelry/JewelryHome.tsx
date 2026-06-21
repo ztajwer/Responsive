@@ -112,34 +112,86 @@ const HOVER_SCALE = 1.07;
 
 const THEME_TABLE = {
   highlight: colors.tableCream,
-  top: colors.tablePeach,
-  panel: colors.tableWarm,
+  top: colors.tableTop,
+  panel: colors.tablePeach,
   leg: colors.tableShade,
   side: colors.tableSide,
   gold: colors.tableGold,
-  rose: colors.tableWarm,
-  emissive: colors.cream,
+  rose: colors.tableRose,
+  bottom: colors.tableBase,
+  emissive: colors.tableRose,
 } as const;
 
 function hexToThree(hex: string) {
   return Number.parseInt(hex.replace("#", ""), 16);
 }
 
-type TablePartKind = "leg" | "panel" | "top" | "gold" | "body";
+type TablePartKind = "leg" | "panel" | "top" | "gold" | "body" | "side";
+
+function isTableGlassMesh(name: string) {
+  return /glass|pane|window|transparent|dome|cover|case|vitrine/i.test(name) && !/gem|jewel|diamond/i.test(name);
+}
+
+function makeDisplayGlassMaterial() {
+  return new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color(0xffffff),
+    metalness: 0.02,
+    roughness: 0.03,
+    transmission: 0.94,
+    thickness: 0.28,
+    ior: 1.52,
+    envMapIntensity: 1.35,
+    transparent: true,
+    opacity: 0.12,
+    side: THREE.DoubleSide,
+    clearcoat: 1,
+    clearcoatRoughness: 0.02,
+    reflectivity: 0.92,
+    attenuationColor: new THREE.Color(0xfffaf5),
+    attenuationDistance: 3.2,
+  });
+}
 
 function resolveTablePartFromName(name: string): TablePartKind | null {
-  if (/glass|pane|window|transparent|diamond|gem|jewel/i.test(name)) return null;
+  if (isTableGlassMesh(name)) return null;
   if (/metal|gold|brass|handle|trim|border|edge|frame|ring|knob|rail/i.test(name)) return "gold";
   if (/leg|base|stand|foot|pedestal|pillar|column/i.test(name)) return "leg";
-  if (/top|counter|surface|velvet|tray|pad|display|mat|shelf|table/i.test(name)) return "top";
+  if (/side|flank|outer|skirt|apron/i.test(name)) return "side";
+  if (/velvet|tray|pad|mat|shelf/i.test(name)) return "top";
+  if (/top|counter|surface|display|table/i.test(name)) return "panel";
   if (/panel|rib|flute|body|support|structure|wood|cabinet|drawer/i.test(name)) return "panel";
   return null;
+}
+
+function resolveTablePartFromHeight(mesh: THREE.Mesh, root: THREE.Object3D): TablePartKind {
+  root.updateMatrixWorld(true);
+  const rootBox = new THREE.Box3().setFromObject(root);
+  const meshBox = new THREE.Box3().setFromObject(mesh);
+  const rootH = Math.max(rootBox.getSize(new THREE.Vector3()).y, 0.0001);
+  const centerY = meshBox.getCenter(new THREE.Vector3()).y;
+  const t = Math.min(1, Math.max(0, (centerY - rootBox.min.y) / rootH));
+
+  if (t > 0.84) return "gold";
+  if (t > 0.7) return "top";
+  if (t > 0.48) return "panel";
+  if (t > 0.28) return "side";
+  return "leg";
+}
+
+function meshSpansTableHeight(mesh: THREE.Mesh, root: THREE.Object3D): boolean {
+  const rootBox = new THREE.Box3().setFromObject(root);
+  const meshBox = new THREE.Box3().setFromObject(mesh);
+  const rootH = rootBox.getSize(new THREE.Vector3()).y;
+  const meshH = meshBox.getSize(new THREE.Vector3()).y;
+  return meshH > rootH * 0.36;
 }
 
 function colorForTablePart(kind: TablePartKind): THREE.Color {
   switch (kind) {
     case "leg":
       return new THREE.Color(hexToThree(THEME_TABLE.leg));
+    case "side":
+      return new THREE.Color(hexToThree(THEME_TABLE.side));
     case "panel":
       return new THREE.Color(hexToThree(THEME_TABLE.panel));
     case "top":
@@ -155,19 +207,36 @@ function colorForTablePart(kind: TablePartKind): THREE.Color {
 
 function materialPropsForPart(kind: TablePartKind) {
   if (kind === "gold") {
-    return { metalness: 0.72, roughness: 0.32, emissiveIntensity: 0.004 };
+    return { metalness: 0.78, roughness: 0.28, emissiveIntensity: 0.006 };
   }
   if (kind === "leg") {
-    return { metalness: 0.06, roughness: 0.68, emissiveIntensity: 0 };
+    return { metalness: 0.06, roughness: 0.66, emissiveIntensity: 0.002 };
   }
   if (kind === "top") {
-    return { metalness: 0.04, roughness: 0.58, emissiveIntensity: 0 };
+    return { metalness: 0.03, roughness: 0.58, emissiveIntensity: 0.003 };
   }
-  return { metalness: 0.08, roughness: 0.62, emissiveIntensity: 0 };
+  if (kind === "side") {
+    return { metalness: 0.07, roughness: 0.6, emissiveIntensity: 0.003 };
+  }
+  if (kind === "panel") {
+    return { metalness: 0.08, roughness: 0.56, emissiveIntensity: 0.003 };
+  }
+  return { metalness: 0.08, roughness: 0.58, emissiveIntensity: 0.003 };
 }
 
-/** GPU height gradient — safe for large single-mesh GLB (no CPU vertex loop) */
-function applyHeightGradientMaterial(mesh: THREE.Mesh) {
+function stripMaterialMaps(mat: THREE.MeshStandardMaterial) {
+  mat.map = null;
+  mat.normalMap = null;
+  mat.roughnessMap = null;
+  mat.metalnessMap = null;
+  mat.aoMap = null;
+  mat.emissiveMap = null;
+  mat.vertexColors = false;
+  mat.needsUpdate = true;
+}
+
+/** 5-shade jewelry counter gradient on single-mesh GLB bodies */
+function applyJewelryTableGradient(mesh: THREE.Mesh) {
   const geometry = mesh.geometry;
   geometry.computeBoundingBox();
   const box = geometry.boundingBox;
@@ -176,15 +245,17 @@ function applyHeightGradientMaterial(mesh: THREE.Mesh) {
   const minY = box.min.y;
   const height = Math.max(box.max.y - minY, 0.0001);
   const leg = colorForTablePart("leg");
+  const side = colorForTablePart("side");
   const panel = colorForTablePart("panel");
   const top = colorForTablePart("top");
+  const gold = colorForTablePart("gold");
   const highlight = new THREE.Color(hexToThree(THEME_TABLE.highlight));
-  const bottom = new THREE.Color(hexToThree(THEME_TABLE.leg));
+  const bottom = new THREE.Color(hexToThree(THEME_TABLE.bottom));
 
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     metalness: 0.08,
-    roughness: 0.62,
+    roughness: 0.56,
     emissive: new THREE.Color(0x000000),
     emissiveIntensity: 0,
   });
@@ -193,8 +264,10 @@ function applyHeightGradientMaterial(mesh: THREE.Mesh) {
     shader.uniforms.uMinY = { value: minY };
     shader.uniforms.uHeight = { value: height };
     shader.uniforms.uLegColor = { value: leg };
+    shader.uniforms.uSideColor = { value: side };
     shader.uniforms.uPanelColor = { value: panel };
     shader.uniforms.uTopColor = { value: top };
+    shader.uniforms.uGoldColor = { value: gold };
     shader.uniforms.uHighlightColor = { value: highlight };
     shader.uniforms.uBottomColor = { value: bottom };
 
@@ -213,8 +286,10 @@ varying vec3 vMajWorldPos;
 uniform float uMinY;
 uniform float uHeight;
 uniform vec3 uLegColor;
+uniform vec3 uSideColor;
 uniform vec3 uPanelColor;
 uniform vec3 uTopColor;
+uniform vec3 uGoldColor;
 uniform vec3 uHighlightColor;
 uniform vec3 uBottomColor;`,
       )
@@ -223,20 +298,22 @@ uniform vec3 uBottomColor;`,
         `#include <color_fragment>
 float t = clamp((vMajWorldPos.y - uMinY) / uHeight, 0.0, 1.0);
 vec3 grad = uBottomColor;
-if (t > 0.88) {
-  grad = mix(uTopColor, uHighlightColor, (t - 0.88) / 0.12);
-} else if (t > 0.62) {
-  grad = mix(uPanelColor, uTopColor, (t - 0.62) / 0.26);
-} else if (t > 0.28) {
-  grad = mix(uLegColor, uPanelColor, (t - 0.28) / 0.34);
+if (t > 0.82) {
+  grad = mix(uTopColor, uHighlightColor, smoothstep(0.82, 1.0, t));
+} else if (t > 0.64) {
+  grad = mix(uPanelColor, uTopColor, smoothstep(0.64, 0.82, t));
+} else if (t > 0.44) {
+  grad = mix(uSideColor, uPanelColor, smoothstep(0.44, 0.64, t));
+} else if (t > 0.22) {
+  grad = mix(uLegColor, uSideColor, smoothstep(0.22, 0.44, t));
 } else {
-  grad = mix(uBottomColor, uLegColor, smoothstep(0.0, 0.28, t));
+  grad = mix(uBottomColor, uLegColor, smoothstep(0.0, 0.22, t));
 }
 diffuseColor.rgb *= grad;`,
       );
   };
 
-  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v13";
+  mat.customProgramCacheKey = () => "maj-jewelry-table-gradient-v22";
   mesh.material = mat;
 }
 
@@ -249,30 +326,54 @@ function makeThemedTableMaterial(kind: TablePartKind) {
     emissive: new THREE.Color(hexToThree(THEME_TABLE.emissive)),
     emissiveIntensity: props.emissiveIntensity,
   });
-  mat.vertexColors = false;
+  stripMaterialMaps(mat);
   return mat;
 }
 
-/** Per-part boutique colors — mesh names when available, vertex bands for single-mesh GLB */
+function isGlassByShape(mesh: THREE.Mesh, root: THREE.Object3D): boolean {
+  const rootBox = new THREE.Box3().setFromObject(root);
+  const meshBox = new THREE.Box3().setFromObject(mesh);
+  const rootH = Math.max(rootBox.getSize(new THREE.Vector3()).y, 0.0001);
+  const meshSize = meshBox.getSize(new THREE.Vector3());
+  const width = Math.max(meshSize.x, meshSize.z);
+  const flatness = meshSize.y / Math.max(width, 0.001);
+  const centerY = meshBox.getCenter(new THREE.Vector3()).y;
+  const t = (centerY - rootBox.min.y) / rootH;
+  return flatness < 0.14 && t > 0.68 && width > 0.025;
+}
+
 function applyTableSurfaceColor(root: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh || !mesh.visible) return;
 
     const name = `${mesh.name} ${mesh.parent?.name || ""}`.toLowerCase();
-    if (/glass|pane|window|transparent|diamond|gem|jewel/i.test(name)) return;
+    if (/diamond|gem|jewel/i.test(name)) return;
 
     mesh.castShadow = false;
     mesh.receiveShadow = false;
 
-    const namedPart = resolveTablePartFromName(name);
-    if (namedPart) {
-      const mat = makeThemedTableMaterial(namedPart);
-      mesh.material = mat;
+    if (isTableGlassMesh(name) || isGlassByShape(mesh, root)) {
+      mesh.material = makeDisplayGlassMaterial();
+      mesh.renderOrder = 3;
       return;
     }
 
-    applyHeightGradientMaterial(mesh);
+    const namedPart = resolveTablePartFromName(name);
+    if (namedPart && !meshSpansTableHeight(mesh, root)) {
+      mesh.material = makeThemedTableMaterial(namedPart);
+      return;
+    }
+
+    if (meshSpansTableHeight(mesh, root)) {
+      applyJewelryTableGradient(mesh);
+      return;
+    }
+
+    const part = namedPart ?? resolveTablePartFromHeight(mesh, root);
+    mesh.material = makeThemedTableMaterial(part);
   });
 }
 
@@ -378,17 +479,15 @@ function resolveProductSurfaceMetrics(
   };
 }
 
-function findDisplaySurfaceMetrics(
-  root: THREE.Object3D,
-  tablePos: [number, number, number],
-): DisplaySurfaceMetrics {
+function findDisplaySurfaceMetrics(root: THREE.Object3D): DisplaySurfaceMetrics {
   root.updateMatrixWorld(true);
-  const sceneBox = new THREE.Box3().setFromObject(root);
-  const sceneSize = sceneBox.getSize(new THREE.Vector3());
-  const sceneCenter = sceneBox.getCenter(new THREE.Vector3());
+  const rootBox = new THREE.Box3().setFromObject(root);
+  const rootMinY = rootBox.min.y;
+  const rootCenter = rootBox.getCenter(new THREE.Vector3());
+  const sceneSize = rootBox.getSize(new THREE.Vector3());
 
-  const yMin = sceneBox.min.y + sceneSize.y * 0.04;
-  const yMax = sceneBox.min.y + sceneSize.y * 0.5;
+  const yMin = rootMinY + sceneSize.y * 0.04;
+  const yMax = rootMinY + sceneSize.y * 0.55;
 
   let best: DisplaySurfaceMetrics | null = null;
   let bestScore = -Infinity;
@@ -409,22 +508,22 @@ function findDisplaySurfaceMetrics(
     if (flatness > 0.55 || width < 0.035) return;
 
     let score = width * 8;
-    score -= Math.abs(center.x - sceneCenter.x) * 12;
-    score -= Math.abs(center.z - tablePos[2]) * 8;
-    score -= center.y * 6;
+    score -= Math.abs(center.x - rootCenter.x) * 12;
+    score -= Math.abs(center.z - rootCenter.z) * 8;
+    score -= (topY - rootMinY) * 2;
 
     const name = `${mesh.name} ${mesh.parent?.name || ""}`.toLowerCase();
     if (/glass|pane/i.test(name)) score -= 50;
     if (/velvet|tray|pad|display|inner|shelf|mat/i.test(name)) score += 36;
-    if (/glass|counter|table|display|velvet|top|tray|round|circle|stand|pad/i.test(name)) score += 24;
+    if (/counter|table|display|velvet|top|tray|round|circle|stand|pad/i.test(name)) score += 24;
 
     if (score > bestScore) {
       bestScore = score;
       best = {
-        surfaceY: topY,
+        surfaceY: topY - rootMinY,
         topWidth: width,
-        forwardZ: center.z,
-        centerX: center.x,
+        forwardZ: center.z - rootCenter.z,
+        centerX: center.x - rootCenter.x,
       };
     }
   });
@@ -432,10 +531,10 @@ function findDisplaySurfaceMetrics(
   if (best) return best;
 
   return {
-    surfaceY: sceneBox.min.y + sceneSize.y * 0.32,
+    surfaceY: sceneSize.y * 0.32,
     topWidth: Math.min(sceneSize.x, sceneSize.z) * 0.5,
-    forwardZ: sceneCenter.z,
-    centerX: sceneCenter.x,
+    forwardZ: 0,
+    centerX: 0,
   };
 }
 
@@ -494,7 +593,7 @@ const ProductModel = memo(function ProductModel({
     prepareProductMaterials(productRoot);
     productRoot.traverse((child) => {
       const mesh = child as THREE.Mesh;
-      if (mesh.isMesh) mesh.renderOrder = 12;
+      if (mesh.isMesh) mesh.renderOrder = 14;
     });
     optimizeModelForGpu(productRoot, textureMax);
 
@@ -700,13 +799,14 @@ function TableModel({
     let alignResult: { groupY: number; projectedNdcY: number } | null = null;
     if (camera instanceof THREE.PerspectiveCamera) {
       alignResult = alignTableBottomToNdc(camera, tablePos[2], calib.counterBottomNdc);
-      alignedY = alignResult.groupY + 0.03;
+      const yNudge = size.width >= 1024 ? 0.01 : 0.03;
+      alignedY = alignResult.groupY + yNudge;
     }
 
     setGroupY(alignedY);
 
     const anchor = getShopDisplayAnchor(size.width);
-    const found = findDisplaySurfaceMetrics(tableRoot, tablePos);
+    const found = findDisplaySurfaceMetrics(tableRoot);
     const resolved = resolveProductSurfaceMetrics(anchor, found, alignedY, tablePos);
     const worldMetrics = resolved.metrics;
 
@@ -762,19 +862,19 @@ function TableBoutiqueLights({
 
   return (
     <>
-      <ambientLight intensity={lowEnd ? 0.38 : 0.34} color={colors.white} />
-      <hemisphereLight args={[colors.tableCream, "#6B5240", lowEnd ? 0.28 : 0.32]} />
+      <ambientLight intensity={lowEnd ? 0.44 : 0.42} color={colors.white} />
+      <hemisphereLight args={[colors.tableRose, "#7A6050", lowEnd ? 0.36 : 0.42]} />
 
       <directionalLight
         position={[0.6, 5.2, 2.8]}
-        intensity={mobile ? 0.82 : 0.9}
+        intensity={mobile ? 0.95 : 1.08}
         color="#FFF8F0"
       />
 
       <directionalLight
         position={[-2.0, 2.8, 1.8]}
-        intensity={mobile ? 0.22 : 0.28}
-        color={colors.tableCream}
+        intensity={mobile ? 0.3 : 0.38}
+        color={colors.tableRose}
       />
 
       {!lowEnd && (
@@ -782,7 +882,7 @@ function TableBoutiqueLights({
           {/* Rim — gold edge depth */}
           <directionalLight
             position={[0.2, 2.4, -2.0]}
-            intensity={mobile ? 0.12 : 0.16}
+            intensity={mobile ? 0.18 : 0.26}
             color={colors.tableGold}
           />
 
@@ -792,7 +892,7 @@ function TableBoutiqueLights({
               <spotLight
                 ref={spotRef}
                 position={[0.08, surfaceY + 1.15, 0.78]}
-                intensity={mobile ? 0.48 : 0.58}
+                intensity={mobile ? 0.62 : 0.82}
                 angle={0.48}
                 penumbra={0.94}
                 distance={6}
@@ -809,9 +909,16 @@ function TableBoutiqueLights({
           {/* Counter surface glow */}
           <pointLight
             position={[0, surfaceY + 0.14, 0.57]}
-            intensity={mobile ? 0.32 : 0.38}
+            intensity={mobile ? 0.42 : 0.55}
             color={colors.tableWarm}
-            distance={3.4}
+            distance={3.8}
+            decay={2}
+          />
+          <pointLight
+            position={[0, surfaceY + 0.06, 0.5]}
+            intensity={mobile ? 0.28 : 0.36}
+            color={colors.tableRose}
+            distance={2.6}
             decay={2}
           />
         </>
@@ -842,7 +949,7 @@ function TableScene({
       <ResponsiveCamera />
       <ViewOffsetMaintainer />
 
-      {!profile.lowEnd && <Environment preset="apartment" environmentIntensity={0.22} />}
+      {!profile.lowEnd && <Environment preset="apartment" environmentIntensity={0.32} />}
 
       <OrbitControls
         makeDefault

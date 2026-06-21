@@ -22,8 +22,8 @@ export const SHOP_LAYOUT_CALIB = {
     viewOffsetMax: 0.88,
   },
   desktop: {
-    counterBottomNdc: -0.76,
-    productLift: 0.022,
+    counterBottomNdc: -0.82,
+    productLift: 0.012,
     productRowSpanFactor: 0.74,
     productHeightFactor: 0.11,
     viewOffsetMax: 0.85,

@@ -5,17 +5,17 @@ export const TABLE_DISPLAY = {
   position: {
     mobile: [0, -0.04, 0.46] as [number, number, number],
     tablet: [0, -0.03, 0.44] as [number, number, number],
-    desktop: [0, -0.03, 0.42] as [number, number, number],
+    desktop: [-0.18, -0.03, 0.42] as [number, number, number],
   },
   target: {
     mobile: [0, 0.06, 0.46] as [number, number, number],
     tablet: [0, 0.05, 0.44] as [number, number, number],
-    desktop: [0, 0.04, 0.42] as [number, number, number],
+    desktop: [-0.18, 0.04, 0.42] as [number, number, number],
   },
   scale: {
     mobile: 0.35,
     tablet: 0.29,
-    desktop: 0.4,
+    desktop: 0.5,
   },
   camera: {
     mobile: { position: [0, 0.26, 2.02] as [number, number, number], fov: 33 },
@@ -120,7 +120,7 @@ function worldSizeFromPixels(
   return (pixels / viewportHeight) * visibleHeight;
 }
 
-const PRODUCT_SIZE_BOOST_PX = { mobile: 12, tablet: 18, desktop: 44 } as const;
+const PRODUCT_SIZE_BOOST_PX = { mobile: 12, tablet: 18, desktop: 10 } as const;
 
 function getProductSizeBoostPx(viewportWidth: number): number {
   if (viewportWidth >= 1024) return PRODUCT_SIZE_BOOST_PX.desktop;
@@ -130,7 +130,7 @@ function getProductSizeBoostPx(viewportWidth: number): number {
 
 /** Big-screen boost only — mobile stays normal. */
 function getProductDisplayMultiplier(viewportWidth: number): number {
-  if (viewportWidth >= 1024) return 2.8;
+  if (viewportWidth >= 1024) return 1.2;
   if (viewportWidth >= 768) return 1.15;
   return 1;
 }
@@ -155,7 +155,7 @@ export function getProductDisplaySize(
   if (!tableTopWidth || tableTopWidth <= 0) return 0.06;
   const mobile = viewportWidth < 768;
   const tablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const factor = mobile ? 0.19 : tablet ? 0.21 : 0.36;
+  const factor = mobile ? 0.19 : tablet ? 0.21 : 0.13;
   return tableTopWidth * factor;
 }
 
@@ -185,20 +185,52 @@ export function getProductArcLayout(
   const topWidth = tableTopWidth && tableTopWidth > 0 ? tableTopWidth : displaySize * 3.2;
   const productSize = getBoostedProductDisplaySize(displaySize, viewportWidth, viewportHeight);
   const zBase = forwardZ ?? tablePos[2] + (viewportWidth < 768 ? 0.038 : 0.044);
+  const liftPx = viewportWidth >= 1024 ? 88 : extraLiftPx;
   const pixelLift = worldSizeFromPixels(
-    extraLiftPx,
+    liftPx,
     viewportHeight,
     cam.fov,
     cam.position[2],
   );
 
-  const edgeInset = displaySize * 0.48;
+  const edgeInset = displaySize * (viewportWidth >= 1024 ? 0.38 : 0.48);
+  const onTableY = surfaceY + liftAboveTable + displaySize * 0.018 + pixelLift;
+
+  if (viewportWidth >= 1024 && count > 1) {
+    const gapWorld = worldSizeFromPixels(34, viewportHeight, cam.fov, cam.position[2]);
+    const centerDist = productSize + gapWorld;
+    const maxHalfChord = Math.max(0.05, topWidth * 0.44 - edgeInset);
+    let radius = maxHalfChord / Math.sin(0.42);
+    let angleStep = centerDist / radius;
+    let arcSpan = angleStep * (count - 1);
+    let halfAngle = arcSpan / 2;
+
+    if (Math.sin(halfAngle) * radius > maxHalfChord) {
+      halfAngle = Math.asin(Math.min(1, maxHalfChord / radius));
+      arcSpan = halfAngle * 2;
+      angleStep = arcSpan / (count - 1);
+    }
+
+    const arcDepth = topWidth * 0.09;
+
+    return modelUrls.map((url, index) => {
+      const angle = -halfAngle + index * angleStep;
+      const x = centerX + Math.sin(angle) * radius;
+      const zCurve = (1 - Math.cos(angle)) * arcDepth;
+      return {
+        url,
+        position: [x, onTableY, zBase - zCurve],
+        rotation: [0, -angle * 0.42, 0],
+        displaySize: productSize,
+      };
+    });
+  }
+
   const arcSpan = count >= 5 ? 0.78 : 0.68;
   const halfAngle = arcSpan / 2;
   const halfChord = Math.max(0.04, topWidth * 0.47 - edgeInset);
   const radius = halfChord / Math.sin(halfAngle);
   const arcDepth = topWidth * 0.085;
-  const onTableY = surfaceY + liftAboveTable + displaySize * 0.018 + pixelLift;
 
   return modelUrls.map((url, index) => {
     const t = count > 1 ? index / (count - 1) : 0.5;

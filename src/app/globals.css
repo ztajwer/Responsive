@@ -198,25 +198,6 @@ html.detail-page-scroll body {
   height: var(--table-band-height);
 }
 
-/* Shop home — background images (loader styles above are untouched) */
-@keyframes shopBgKenBurns {
-  0% {
-    transform: scale(1.04) translateZ(0);
-  }
-  100% {
-    transform: scale(1.11) translateZ(0);
-  }
-}
-
-@keyframes shopBgKenBurnsMobile {
-  0% {
-    transform: scale(1.05) translateZ(0);
-  }
-  100% {
-    transform: scale(1.13) translateZ(0);
-  }
-}
-
 .shop-experience {
   width: 100%;
   height: 100dvh;
@@ -234,19 +215,14 @@ html.detail-page-scroll body {
 .shop-experience-bg__zoom {
   position: absolute;
   inset: -20%;
-  transform: scale(1) translateZ(0);
-  transform-origin: center center;
-  transition: transform 2.8s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
+  transform: scale(0.84) translateZ(0);
+  transform-origin: 50% 86%;
   backface-visibility: hidden;
+  will-change: transform;
   background-image: url("/background.png");
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
-}
-
-.shop-experience-bg__zoom--live {
-  animation: shopBgKenBurns 52s ease-in-out infinite alternate;
 }
 
 /* Shop enter — dark vignette, then circular light from table center */
@@ -339,13 +315,10 @@ html.detail-page-scroll body {
 @media (max-width: 767px) {
   .shop-experience-bg__zoom {
     inset: -22%;
+    transform: scale(0.82) translateZ(0);
+    transform-origin: center center;
     background-image: url("/main_mob_bg.png");
     background-position: center 58%;
-  }
-
-  .shop-experience-bg__zoom--live {
-    animation-name: shopBgKenBurnsMobile;
-    animation-duration: 48s;
   }
 
   .shop-reveal-overlay {
@@ -354,13 +327,6 @@ html.detail-page-scroll body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shop-experience-bg__zoom,
-  .shop-experience-bg__zoom--live {
-    animation: none !important;
-    transition: none !important;
-    transform: scale(1) translateZ(0) !important;
-  }
-
   .shop-reveal-overlay--live .shop-reveal-overlay__dark,
   .shop-reveal-overlay--live .shop-reveal-overlay__light {
     animation: none !important;
