@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { extendGltfLoader, getModelUrl } from "@/lib/modelAssets";
@@ -13,33 +13,22 @@ import type { Product } from "@/lib/products";
 function DetailLights() {
   return (
     <>
-      <ambientLight intensity={0.58} color={colors.white} />
-      <hemisphereLight args={[colors.tableCream, colors.tablePeach, 0.48]} />
-      <directionalLight position={[2.6, 4.2, 2.4]} intensity={1.15} color={colors.white} />
-      <directionalLight position={[-2.4, 2.8, -1.6]} intensity={0.42} color={colors.roseGoldLight} />
-      <pointLight position={[0, 1.8, 1.4]} intensity={0.48} color={colors.goldLight} distance={5} />
-      <pointLight position={[0.8, 0.4, -0.6]} intensity={0.22} color={colors.gold} distance={3} />
+      <ambientLight intensity={0.62} color={colors.white} />
+      <hemisphereLight args={[colors.cream, "#8A7358", 0.38]} />
+      <directionalLight position={[2.2, 4.5, 3]} intensity={1.1} color="#FFF9F2" />
+      <directionalLight position={[-2.8, 2.2, -1.2]} intensity={0.35} color={colors.roseGoldLight} />
+      <pointLight position={[0.5, 1.4, 2]} intensity={0.4} color={colors.goldLight} distance={6} />
     </>
   );
 }
 
-function DetailPedestal() {
-  return (
-    <mesh position={[0, -0.002, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <ringGeometry args={[0.22, 0.34, 64]} />
-      <meshStandardMaterial
-        color={colors.tableCream}
-        metalness={0.42}
-        roughness={0.38}
-        emissive={new THREE.Color(colors.gold)}
-        emissiveIntensity={0.04}
-      />
-    </mesh>
-  );
-}
-
-function DetailProductModel({ modelFile, displaySize }: { modelFile: string; displaySize: number }) {
-  const groupRef = useRef<THREE.Group>(null);
+function DetailProductModel({
+  modelFile,
+  displaySize,
+}: {
+  modelFile: string;
+  displaySize: number;
+}) {
   const url = useMemo(() => getModelUrl(modelFile), [modelFile]);
   const { scene: productRoot } = useGLTF(url, false, false, extendGltfLoader);
 
@@ -53,16 +42,7 @@ function DetailProductModel({ modelFile, displaySize }: { modelFile: string; dis
     });
   }, [productRoot, displaySize]);
 
-  useFrame((_, delta) => {
-    if (!groupRef.current) return;
-    groupRef.current.rotation.y += delta * 0.22;
-  });
-
-  return (
-    <group ref={groupRef} position={[0, 0.02, 0]}>
-      <primitive object={productRoot} />
-    </group>
-  );
+  return <primitive object={productRoot} />;
 }
 
 function ResponsiveCamera() {
@@ -71,50 +51,55 @@ function ResponsiveCamera() {
   useLayoutEffect(() => {
     if (!(camera instanceof THREE.PerspectiveCamera)) return;
     const mobile = size.width < 768;
-    camera.position.set(0, mobile ? 0.2 : 0.16, mobile ? 1.78 : 1.95);
-    camera.fov = mobile ? 33 : 29;
+    camera.position.set(0, mobile ? 0.12 : 0.08, mobile ? 2.05 : 2.25);
+    camera.fov = mobile ? 32 : 28;
     camera.near = 0.05;
     camera.far = 100;
-    camera.lookAt(0, mobile ? 0.1 : 0.08, 0);
+    camera.lookAt(0, mobile ? 0.06 : 0.04, 0);
     camera.updateProjectionMatrix();
   }, [camera, size.width, size.height]);
 
   return null;
 }
 
-function DetailScene({ product }: { product: Product }) {
+function DetailScene({
+  product,
+  displaySize,
+}: {
+  product: Product;
+  displaySize: number;
+}) {
   const { size } = useThree();
   const mobile = size.width < 768;
-  const displaySize = mobile ? 0.24 : 0.22;
 
   return (
     <>
       <ResponsiveCamera />
       <DetailLights />
-      <Environment preset="apartment" environmentIntensity={0.35} />
+      <Environment preset="studio" environmentIntensity={0.45} />
       <OrbitControls
         makeDefault
-        target={[0, mobile ? 0.1 : 0.08, 0]}
+        target={[0, mobile ? 0.06 : 0.04, 0]}
         enableDamping
-        dampingFactor={0.1}
-        enableZoom={false}
+        dampingFactor={0.08}
+        enableZoom
         enablePan={false}
-        rotateSpeed={mobile ? 0.58 : 0.48}
-        minPolarAngle={Math.PI * 0.2}
-        maxPolarAngle={Math.PI * 0.46}
-        minAzimuthAngle={-Math.PI * 0.6}
-        maxAzimuthAngle={Math.PI * 0.6}
+        minDistance={mobile ? 1.35 : 1.5}
+        maxDistance={mobile ? 3.2 : 3.6}
+        rotateSpeed={mobile ? 0.52 : 0.42}
+        zoomSpeed={0.65}
+        minPolarAngle={Math.PI * 0.18}
+        maxPolarAngle={Math.PI * 0.52}
       />
-      <DetailPedestal />
       <Suspense fallback={null}>
         <DetailProductModel modelFile={product.modelFile} displaySize={displaySize} />
       </Suspense>
       <ContactShadows
         position={[0, 0, 0]}
-        opacity={0.2}
-        scale={mobile ? 2.6 : 3}
-        blur={3.2}
-        far={2.4}
+        opacity={0.14}
+        scale={mobile ? 2.2 : 2.6}
+        blur={3.5}
+        far={2}
         color="#3D2B1F"
         frames={1}
         resolution={512}
@@ -123,17 +108,14 @@ function DetailScene({ product }: { product: Product }) {
   );
 }
 
-export default function ProductDetailCanvas({ product }: { product: Product }) {
+interface ProductDetailCanvasProps {
+  product: Product;
+  displaySize: number;
+}
+
+export default function ProductDetailCanvas({ product, displaySize }: ProductDetailCanvasProps) {
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 68% 55% at 50% 38%, rgba(212,175,55,0.18) 0%, transparent 70%), radial-gradient(ellipse 90% 70% at 50% 100%, rgba(164,134,104,0.08) 0%, transparent 55%)",
-        }}
-      />
-      <div className="pointer-events-none absolute inset-4 rounded-[1rem] border border-maj-gold/10 sm:inset-5" />
+    <div className="relative h-full w-full">
       <Canvas
         className="touch-pan-y"
         dpr={[1, 2]}
@@ -142,13 +124,14 @@ export default function ProductDetailCanvas({ product }: { product: Product }) {
           alpha: true,
           powerPreference: "high-performance",
         }}
-        camera={{ position: [0, 0.16, 1.95], fov: 29, near: 0.05, far: 100 }}
+        camera={{ position: [0, 0.08, 2.25], fov: 28, near: 0.05, far: 100 }}
+        onCreated={({ gl }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.08;
+        }}
       >
-        <DetailScene product={product} />
+        <DetailScene product={product} displaySize={displaySize} />
       </Canvas>
-      <p className="pointer-events-none absolute bottom-4 left-0 right-0 text-center font-sans text-[8px] uppercase tracking-[0.42em] text-maj-brown/40 sm:text-[9px]">
-        Drag to admire · 360° view
-      </p>
     </div>
   );
 }

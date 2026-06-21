@@ -2,38 +2,23 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import Link from "next/link";
 import { useGLTF } from "@react-three/drei";
 import type { Product } from "@/lib/products";
+import { getAllProducts } from "@/lib/products";
 import { getModelUrl } from "@/lib/modelAssets";
+import { getProductDetailDisplaySize } from "@/lib/productDetailDisplay";
 import { getBoutiquePhoneDisplay, openWhatsAppInquiry } from "@/lib/whatsapp";
 
 const ProductDetailCanvas = dynamic(() => import("@/components/product/ProductDetailCanvas"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[min(56dvh,460px)] w-full items-center justify-center md:min-h-full">
-      <div className="flex flex-col items-center gap-4">
-        <div className="h-px w-20 bg-gradient-to-r from-transparent via-maj-gold/80 to-transparent" />
-        <p className="font-display text-sm italic tracking-[0.2em] text-maj-brown/50">Curating piece</p>
-        <div className="h-1 w-1 rotate-45 border border-maj-gold/60 product-ornament-glow" />
-      </div>
+    <div className="flex h-full min-h-[52dvh] w-full items-center justify-center lg:min-h-0">
+      <p className="font-display text-sm italic tracking-[0.22em] text-maj-brown/45">Presenting piece…</p>
     </div>
   ),
 });
-
-function OrnamentDivider() {
-  return (
-    <div className="my-5 flex items-center gap-3 sm:my-6">
-      <div className="h-px flex-1 bg-gradient-to-r from-maj-gold/60 via-maj-gold/20 to-transparent" />
-      <div className="flex items-center gap-2">
-        <div className="h-1 w-1 rotate-45 border border-maj-gold/70" />
-        <div className="h-1.5 w-1.5 rotate-45 border border-maj-gold" />
-        <div className="h-1 w-1 rotate-45 border border-maj-gold/70" />
-      </div>
-      <div className="h-px flex-1 bg-gradient-to-l from-maj-gold/60 via-maj-gold/20 to-transparent" />
-    </div>
-  );
-}
 
 interface ProductDetailViewProps {
   product: Product;
@@ -41,10 +26,16 @@ interface ProductDetailViewProps {
 
 export default function ProductDetailView({ product }: ProductDetailViewProps) {
   const [mounted, setMounted] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(1280);
   const phoneDisplay = getBoutiquePhoneDisplay();
+  const displaySize = getProductDetailDisplaySize(product, viewportWidth);
+  const others = getAllProducts().filter((item) => item.id !== product.id).slice(0, 3);
 
   useEffect(() => {
     setMounted(true);
+    const sync = () => setViewportWidth(window.innerWidth);
+    sync();
+    window.addEventListener("resize", sync);
     useGLTF.preload(getModelUrl(product.modelFile));
 
     const html = document.documentElement;
@@ -55,105 +46,120 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
     body.style.overflow = "auto";
 
     return () => {
+      window.removeEventListener("resize", sync);
       html.style.overflow = prevHtmlOverflow;
       body.style.overflow = prevBodyOverflow;
     };
   }, [product.modelFile]);
 
   return (
-    <div className="product-detail-page fixed inset-0 z-[60] overflow-y-auto overflow-x-hidden text-maj-brown">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.35]">
-        <div className="absolute left-[8%] top-[12%] h-32 w-32 rounded-full bg-maj-gold/10 blur-3xl" />
-        <div className="absolute bottom-[18%] right-[6%] h-40 w-40 rounded-full bg-maj-rose/12 blur-3xl" />
+    <div className="product-detail-immersive fixed inset-0 z-[60] overflow-x-hidden overflow-y-auto text-maj-brown">
+      {/* Boutique interior background — blurred like reference */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <Image
+          src={viewportWidth < 768 ? "/main_mob_bg.png" : "/background.png"}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="product-detail-bg-image object-cover"
+          aria-hidden
+        />
+        <div className="absolute inset-0 bg-[#F3E8DC]/72 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#FAF6F1]/55 via-[#F5EBE0]/35 to-[#EDE0D0]/75" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#FAF6F1]/88 lg:to-[#FFFBF7]/92" />
       </div>
 
-      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col">
-        <header className="sticky top-0 z-30 border-b border-maj-gold/12 bg-[#faf6f1e8] backdrop-blur-xl">
-          <div className="flex items-center justify-between px-4 py-3.5 sm:px-8 sm:py-4">
-            <Link
-              href="/"
-              className="group inline-flex items-center gap-2.5 font-sans text-[10px] uppercase tracking-[0.32em] text-maj-brown/65 transition hover:text-maj-gold"
-            >
-              <span
-                aria-hidden
-                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-maj-gold/25 bg-white/50 transition group-hover:border-maj-gold/45"
-              >
-                ←
-              </span>
-              Boutique
-            </Link>
-            <div className="text-center">
-              <p className="font-sans text-[8px] uppercase tracking-[0.55em] text-maj-gold/70 sm:text-[9px]">
-                MAJ
-              </p>
-              <p className="font-display text-[11px] italic tracking-[0.28em] text-maj-brown/55 sm:text-xs">
-                Atelier
-              </p>
-            </div>
-            <div className="w-[72px] sm:w-[88px]" aria-hidden />
+      <Link
+        href="/"
+        className="product-detail-back fixed left-4 top-4 z-40 inline-flex items-center gap-2 font-sans text-[9px] uppercase tracking-[0.34em] text-maj-brown/75 transition hover:text-maj-gold sm:left-6 sm:top-6 sm:text-[10px]"
+      >
+        <span className="text-base leading-none">←</span>
+        Back to Boutique
+      </Link>
+
+      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[1480px] flex-col lg:flex-row lg:items-stretch">
+        {/* Left — 3D product stage */}
+        <section className="relative flex min-h-[52dvh] flex-1 flex-col justify-center px-2 pb-4 pt-14 sm:min-h-[58dvh] sm:px-4 sm:pt-16 lg:min-h-[100dvh] lg:px-8 lg:pb-8 lg:pt-20">
+          <div className="relative mx-auto h-[min(52dvh,520px)] w-full max-w-3xl lg:h-[min(78vh,720px)] lg:max-w-none">
+            {mounted ? <ProductDetailCanvas product={product} displaySize={displaySize} /> : null}
           </div>
-        </header>
+          <p className="pointer-events-none mt-3 text-center font-sans text-[8px] uppercase tracking-[0.38em] text-maj-brown/42 sm:text-[9px]">
+            Drag to rotate · Scroll to zoom
+          </p>
+        </section>
 
-        <div className="flex flex-1 flex-col lg:grid lg:min-h-[calc(100dvh-4.25rem)] lg:grid-cols-[1.08fr_0.92fr]">
-          <section className="relative px-3 pb-2 pt-3 sm:px-5 sm:pt-5 lg:px-8 lg:py-8">
-            <div className="product-detail-frame h-[min(56dvh,480px)] overflow-hidden rounded-[1.35rem] bg-gradient-to-br from-[#F8F0E8] via-maj-cream to-[#EBDCCB] lg:h-full lg:min-h-[calc(100dvh-8rem)] lg:rounded-[1.5rem]">
-              {mounted ? <ProductDetailCanvas product={product} /> : null}
+        {/* Right — glass info panel */}
+        <aside className="product-glass-panel relative z-20 mx-3 mb-24 mt-2 flex shrink-0 flex-col sm:mx-5 lg:mx-0 lg:mb-0 lg:mr-6 lg:mt-0 lg:w-[min(100%,420px)] lg:self-center xl:w-[440px]">
+          <div className="animate-fade-up px-6 py-7 sm:px-8 sm:py-9">
+            <p className="font-sans text-[9px] uppercase tracking-[0.48em] text-maj-brown/50 sm:text-[10px]">
+              {product.category}
+            </p>
+
+            <h1 className="mt-3 font-display text-[clamp(2rem,7.5vw,2.85rem)] font-light leading-[1.08] tracking-[0.03em] text-maj-brown">
+              {product.title}
+            </h1>
+
+            <p className="mt-2 font-display text-[clamp(0.95rem,3.2vw,1.15rem)] font-light italic tracking-[0.1em] text-maj-brown-mid/85">
+              {product.tagline}
+            </p>
+
+            <div className="my-5 h-px w-full bg-gradient-to-r from-maj-gold/45 via-maj-gold/15 to-transparent sm:my-6" />
+
+            <p className="font-sans text-[12.5px] leading-[1.82] text-maj-brown/78 sm:text-[13.5px] sm:leading-[1.88]">
+              {product.description}
+            </p>
+
+            <p className="mt-5 font-sans text-[9px] uppercase tracking-[0.36em] text-maj-brown/55 sm:mt-6">
+              {product.materials}
+            </p>
+
+            <ul className="mt-4 space-y-2">
+              {product.features.map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2.5 font-sans text-[12px] leading-relaxed text-maj-brown/72 sm:text-[13px]"
+                >
+                  <span className="mt-[7px] h-1 w-1 shrink-0 rotate-45 border border-maj-gold/80 bg-maj-gold/30" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-7 border-t border-maj-gold/15 pt-6 sm:mt-8">
+              <p className="font-sans text-[9px] uppercase tracking-[0.38em] text-maj-brown/45">Price</p>
+              <p className="mt-2 font-display text-[clamp(1.35rem,5vw,1.75rem)] tracking-[0.05em] text-maj-brown">
+                Contact for Price
+              </p>
+              <p className="mt-1 font-sans text-[10px] text-maj-brown/48">{phoneDisplay}</p>
             </div>
-          </section>
 
-          <section className="flex flex-col justify-center px-5 pb-32 pt-2 sm:px-8 sm:pt-4 lg:px-10 lg:pb-12 lg:pr-12 xl:px-14">
-            <div className="animate-fade-up">
-              <span className="inline-flex items-center gap-2 rounded-full border border-maj-gold/25 bg-white/55 px-3.5 py-1.5 font-sans text-[9px] uppercase tracking-[0.42em] text-maj-gold sm:text-[10px]">
-                <span className="h-1 w-1 rounded-full bg-maj-gold" />
-                {product.category}
-              </span>
+            <button
+              type="button"
+              onClick={() => openWhatsAppInquiry(product.title)}
+              className="product-inquiry-gold mt-7 w-full px-8 py-3.5 font-sans text-[11px] uppercase tracking-[0.4em] transition active:scale-[0.99] sm:mt-8"
+            >
+              Inquiry
+            </button>
 
-              <h1 className="mt-4 font-display text-[clamp(2.35rem,9vw,3.75rem)] font-light leading-[1.02] tracking-[0.04em] text-maj-brown sm:mt-5">
-                {product.title}
-              </h1>
-
-              <p className="mt-2 font-display text-[clamp(1rem,3.8vw,1.25rem)] font-light italic tracking-[0.12em] text-maj-brown-mid/80">
-                {product.tagline}
+            <div className="mt-8 border-t border-maj-gold/12 pt-6">
+              <p className="font-sans text-[9px] uppercase tracking-[0.4em] text-maj-brown/42">
+                More from the collection
               </p>
-
-              <OrnamentDivider />
-
-              <p className="max-w-lg font-sans text-[13px] leading-[1.85] tracking-[0.015em] text-maj-brown/74 sm:text-[14px] sm:leading-[1.9]">
-                {product.description}
-              </p>
-
-              <div className="mt-7 grid gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-4">
-                <div className="rounded-2xl border border-maj-gold/20 bg-gradient-to-br from-white/70 to-white/35 p-4 shadow-[0_8px_32px_rgba(61,43,31,0.06)] backdrop-blur-sm sm:p-5">
-                  <p className="font-sans text-[9px] uppercase tracking-[0.4em] text-maj-brown/45">Pricing</p>
-                  <p className="mt-2 font-display text-[clamp(1.2rem,4.8vw,1.55rem)] tracking-[0.06em] text-maj-brown">
-                    Contact for Price
-                  </p>
-                  <p className="mt-1.5 font-sans text-[10px] tracking-wide text-maj-brown/50">
-                    Bespoke quotation on request
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-maj-gold/20 bg-gradient-to-br from-white/70 to-white/35 p-4 shadow-[0_8px_32px_rgba(61,43,31,0.06)] backdrop-blur-sm sm:p-5">
-                  <p className="font-sans text-[9px] uppercase tracking-[0.4em] text-maj-brown/45">Boutique</p>
-                  <p className="mt-2 font-display text-[clamp(1.05rem,4.2vw,1.35rem)] tracking-[0.05em] text-maj-brown">
-                    {phoneDisplay}
-                  </p>
-                  <p className="mt-1.5 font-sans text-[10px] tracking-wide text-maj-brown/50">
-                    Placeholder · WhatsApp inquiry
-                  </p>
-                </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {others.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/product/${item.id}`}
+                    className="rounded-full border border-maj-gold/22 bg-white/40 px-3 py-1.5 font-sans text-[9px] uppercase tracking-[0.22em] text-maj-brown/65 transition hover:border-maj-gold/45 hover:bg-white/65 hover:text-maj-gold"
+                  >
+                    {item.title}
+                  </Link>
+                ))}
               </div>
-
-              <button
-                type="button"
-                onClick={() => openWhatsAppInquiry(product.title)}
-                className="product-inquiry-btn mt-7 w-full rounded-full border border-maj-gold/40 bg-gradient-to-r from-maj-gold via-[#c9a04a] to-maj-gold px-8 py-4 font-sans text-[11px] uppercase tracking-[0.38em] text-maj-brown shadow-[0_10px_30px_rgba(212,175,55,0.28)] transition hover:brightness-105 hover:shadow-[0_14px_36px_rgba(212,175,55,0.34)] active:scale-[0.99] sm:mt-8 sm:w-auto sm:min-w-[260px]"
-              >
-                Inquiry via WhatsApp
-              </button>
             </div>
-          </section>
-        </div>
+          </div>
+        </aside>
       </div>
     </div>
   );
