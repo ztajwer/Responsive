@@ -484,9 +484,7 @@ const ProductModel = memo(function ProductModel({
       const mesh = child as THREE.Mesh;
       if (mesh.isMesh) mesh.renderOrder = 12;
     });
-    if (textureMax <= 512) {
-      optimizeModelForGpu(productRoot, textureMax);
-    }
+    optimizeModelForGpu(productRoot, textureMax);
 
     const box = new THREE.Box3().setFromObject(productRoot);
     const size = box.getSize(new THREE.Vector3());
@@ -566,7 +564,7 @@ function TableProducts({
 }) {
   const { size } = useThree();
   const maxProducts = getMaxShopProducts(profile);
-  const textureMax = profile.lowEnd ? 512 : profile.mobile ? 768 : 1024;
+  const textureMax = profile.lowEnd ? 384 : profile.mobile ? 512 : 768;
   const calib = getShopLayoutCalib(size.width);
   const displaySize = useMemo(
     () => getProductDisplaySize(size.width, size.height, tableTopWidth),
@@ -673,7 +671,7 @@ function TableModel({
     let alignResult: { groupY: number; projectedNdcY: number } | null = null;
     if (camera instanceof THREE.PerspectiveCamera) {
       alignResult = alignTableBottomToNdc(camera, tablePos[2], calib.counterBottomNdc);
-      alignedY = alignResult.groupY + 0.045;
+      alignedY = alignResult.groupY + 0.01;
     }
 
     setGroupY(alignedY);

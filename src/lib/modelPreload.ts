@@ -49,7 +49,7 @@ async function preloadAllShopGltfParallel() {
   triggerGltfPreload(useGLTF, tableUrl);
 
   const { lowEnd } = getDeviceProfile();
-  const staggerMs = lowEnd ? 150 : 40;
+  const staggerMs = lowEnd ? 80 : 0;
 
   productUrls.forEach((url, index) => {
     window.setTimeout(() => triggerGltfPreload(useGLTF, url), staggerMs * index);
@@ -85,6 +85,7 @@ export function bootFastPipeline() {
     preloadImage(src);
   }
 
+  void getDrei();
   void preloadAllShopGltfParallel();
 }
 

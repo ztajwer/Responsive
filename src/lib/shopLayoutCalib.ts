@@ -7,22 +7,22 @@
  */
 export const SHOP_LAYOUT_CALIB = {
   mobile: {
-    /** Slightly above bottom */
-    counterBottomNdc: -0.68,
+    /** Near bottom of viewport */
+    counterBottomNdc: -0.93,
     productLift: 0.02,
     productRowSpanFactor: 0.76,
     productHeightFactor: 0.13,
     viewOffsetMax: 0.92,
   },
   tablet: {
-    counterBottomNdc: -0.67,
+    counterBottomNdc: -0.91,
     productLift: 0.02,
     productRowSpanFactor: 0.76,
     productHeightFactor: 0.12,
     viewOffsetMax: 0.88,
   },
   desktop: {
-    counterBottomNdc: -0.66,
+    counterBottomNdc: -0.89,
     productLift: 0.022,
     productRowSpanFactor: 0.74,
     productHeightFactor: 0.11,

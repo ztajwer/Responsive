@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import SeoJsonLd from "@/components/SeoJsonLd";
+import EarlyModelPreload from "@/components/EarlyModelPreload";
 import { siteConfig } from "@/lib/site";
-import { GLB_CDN_BASE, SHOP_GLB_FILES } from "@/lib/glbConfig";
+import { SHOP_GLB_FILES } from "@/lib/glbConfig";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -96,18 +97,15 @@ export default function RootLayout({
           rel="dns-prefetch"
           href="https://media.githubusercontent.com/media/ztajwer/Responsive/main/public"
         />
-        <link
-          rel="preload"
-          href="/table-3d.glb"
-          as="fetch"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          href={`${GLB_CDN_BASE}/${SHOP_GLB_FILES[0]}`}
-          as="fetch"
-          crossOrigin="anonymous"
-        />
+        {SHOP_GLB_FILES.map((file) => (
+          <link
+            key={file}
+            rel="preload"
+            href={`/${file}`}
+            as="fetch"
+            crossOrigin="anonymous"
+          />
+        ))}
         <link rel="preload" href="/bg.png" as="image" />
         <link rel="preload" href="/logo_outline.png" as="image" />
         <link rel="preload" href="/wh_logo-removebg-preview.png" as="image" />
@@ -117,6 +115,7 @@ export default function RootLayout({
         <link rel="preload" href="/main_mob_bg.png" as="image" />
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
+        <EarlyModelPreload />
         <SeoJsonLd />
         {children}
       </body>

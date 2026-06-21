@@ -12,7 +12,7 @@ interface LoaderProps {
   onComplete: () => void;
 }
 
-const LOADER_DURATION_MS_DEFAULT = 2200;
+const LOADER_DURATION_MS_DEFAULT = 2800;
 const LOADER_DURATION_MS_LOW = 1400;
 const FADE_DURATION_MS = 300;
 
