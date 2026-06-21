@@ -671,7 +671,7 @@ function TableModel({
     let alignResult: { groupY: number; projectedNdcY: number } | null = null;
     if (camera instanceof THREE.PerspectiveCamera) {
       alignResult = alignTableBottomToNdc(camera, tablePos[2], calib.counterBottomNdc);
-      alignedY = alignResult.groupY + 0.01;
+      alignedY = alignResult.groupY + 0.025;
     }
 
     setGroupY(alignedY);
