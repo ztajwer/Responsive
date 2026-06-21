@@ -85,6 +85,19 @@ body {
 /* Product detail — immersive boutique (reference layout) */
 .product-detail-immersive {
   color: var(--maj-brown);
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1023px) {
+  .product-detail-immersive {
+    position: relative;
+    min-height: 100dvh;
+    height: auto;
+  }
+
+  .product-glass-panel {
+    margin-bottom: 1.5rem;
+  }
 }
 
 .product-detail-bg-image {

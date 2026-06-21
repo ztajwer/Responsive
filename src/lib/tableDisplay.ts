@@ -15,7 +15,7 @@ export const TABLE_DISPLAY = {
   scale: {
     mobile: 0.35,
     tablet: 0.29,
-    desktop: 0.37,
+    desktop: 0.4,
   },
   camera: {
     mobile: { position: [0, 0.26, 2.02] as [number, number, number], fov: 33 },
@@ -120,7 +120,7 @@ function worldSizeFromPixels(
   return (pixels / viewportHeight) * visibleHeight;
 }
 
-const PRODUCT_SIZE_BOOST_PX = { mobile: 18, tablet: 28, desktop: 42 } as const;
+const PRODUCT_SIZE_BOOST_PX = { mobile: 12, tablet: 18, desktop: 44 } as const;
 
 function getProductSizeBoostPx(viewportWidth: number): number {
   if (viewportWidth >= 1024) return PRODUCT_SIZE_BOOST_PX.desktop;
@@ -128,7 +128,12 @@ function getProductSizeBoostPx(viewportWidth: number): number {
   return PRODUCT_SIZE_BOOST_PX.mobile;
 }
 
-const PRODUCT_DISPLAY_MULTIPLIER = 3;
+/** Big-screen boost only — mobile stays normal. */
+function getProductDisplayMultiplier(viewportWidth: number): number {
+  if (viewportWidth >= 1024) return 2.8;
+  if (viewportWidth >= 768) return 1.15;
+  return 1;
+}
 
 function getBoostedProductDisplaySize(
   baseSize: number,
@@ -138,7 +143,7 @@ function getBoostedProductDisplaySize(
   const cam = getTableCamera(viewportWidth);
   const boosted =
     baseSize + worldSizeFromPixels(getProductSizeBoostPx(viewportWidth), viewportHeight, cam.fov, cam.position[2]);
-  return boosted * PRODUCT_DISPLAY_MULTIPLIER;
+  return boosted * getProductDisplayMultiplier(viewportWidth);
 }
 
 /** Product height from counter width — one target span for equal on-screen presence */
@@ -150,7 +155,7 @@ export function getProductDisplaySize(
   if (!tableTopWidth || tableTopWidth <= 0) return 0.06;
   const mobile = viewportWidth < 768;
   const tablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const factor = mobile ? 0.23 : tablet ? 0.27 : 0.34;
+  const factor = mobile ? 0.19 : tablet ? 0.21 : 0.36;
   return tableTopWidth * factor;
 }
 
