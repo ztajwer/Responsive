@@ -12,11 +12,13 @@ export const colors = {
   goldMuted: "#B8943F",
   table: "#D2A57E",
   tableTop: "#D2A57E",
-  tableLeg: "#C49A78",
+  tableLeg: "#D2AE90",
   /** Per-part boutique counter palette */
   tableCream: "#F0DCC8",
   tablePeach: "#D2A57E",
-  tableWarm: "#C9A67A",
+  tableWarm: "#D0AD88",
   tableGold: "#D4AF37",
-  tableBase: "#B88E68",
+  tableBase: "#C8A282",
+  /** Lower side panels — lighter than base/legs */
+  tableSide: "#DAB89A",
 } as const;

@@ -109,7 +109,8 @@ const THEME_TABLE = {
   highlight: colors.tableCream,
   top: colors.tablePeach,
   panel: colors.tableWarm,
-  leg: colors.tableBase,
+  leg: colors.tableSide,
+  side: colors.tableSide,
   gold: colors.tableGold,
   rose: colors.tableWarm,
   emissive: colors.cream,
@@ -152,12 +153,12 @@ function materialPropsForPart(kind: TablePartKind) {
     return { metalness: 0.58, roughness: 0.28, emissiveIntensity: 0.012 };
   }
   if (kind === "leg") {
-    return { metalness: 0.32, roughness: 0.4, emissiveIntensity: 0.005 };
+    return { metalness: 0.28, roughness: 0.44, emissiveIntensity: 0.009 };
   }
   if (kind === "top") {
     return { metalness: 0.26, roughness: 0.36, emissiveIntensity: 0.007 };
   }
-  return { metalness: 0.28, roughness: 0.38, emissiveIntensity: 0.006 };
+  return { metalness: 0.26, roughness: 0.4, emissiveIntensity: 0.008 };
 }
 
 /** GPU height gradient — safe for large single-mesh GLB (no CPU vertex loop) */
@@ -173,6 +174,7 @@ function applyHeightGradientMaterial(mesh: THREE.Mesh) {
   const panel = colorForTablePart("panel");
   const top = colorForTablePart("top");
   const highlight = new THREE.Color(hexToThree(THEME_TABLE.highlight));
+  const sideLight = new THREE.Color(hexToThree(THEME_TABLE.side)).lerp(highlight, 0.22);
 
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -189,6 +191,7 @@ function applyHeightGradientMaterial(mesh: THREE.Mesh) {
     shader.uniforms.uPanelColor = { value: panel };
     shader.uniforms.uTopColor = { value: top };
     shader.uniforms.uHighlightColor = { value: highlight };
+    shader.uniforms.uSideLightColor = { value: sideLight };
 
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nvarying vec3 vMajWorldPos;")
@@ -207,27 +210,30 @@ uniform float uHeight;
 uniform vec3 uLegColor;
 uniform vec3 uPanelColor;
 uniform vec3 uTopColor;
-uniform vec3 uHighlightColor;`,
+uniform vec3 uHighlightColor;
+uniform vec3 uSideLightColor;`,
       )
       .replace(
         "#include <color_fragment>",
         `#include <color_fragment>
 float t = clamp((vMajWorldPos.y - uMinY) / uHeight, 0.0, 1.0);
-vec3 grad = uLegColor;
+vec3 grad = uSideLightColor;
 if (t > 0.92) {
   grad = uHighlightColor;
 } else if (t > 0.82) {
   grad = mix(uTopColor, uHighlightColor, (t - 0.82) / 0.1);
 } else if (t > 0.5) {
   grad = mix(uPanelColor, uTopColor, (t - 0.5) / 0.32);
+} else if (t > 0.28) {
+  grad = mix(uSideLightColor, uPanelColor, (t - 0.28) / 0.22);
 } else {
-  grad = mix(uLegColor, uPanelColor, smoothstep(0.0, 0.42, t));
+  grad = mix(uSideLightColor, uLegColor, smoothstep(0.0, 0.28, t));
 }
 diffuseColor.rgb *= grad;`,
       );
   };
 
-  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v8";
+  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v9";
   mesh.material = mat;
 }
 
@@ -848,7 +854,7 @@ function TableScene({
           scale={shadow.scale}
           blur={shadow.blur}
           far={2}
-          color="#2A2018"
+          color="#5C4838"
           frames={1}
           resolution={256}
         />
