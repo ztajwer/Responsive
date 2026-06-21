@@ -220,14 +220,14 @@ if (t > 0.92) {
   grad = mix(uTopColor, uHighlightColor, (t - 0.82) / 0.1);
 } else if (t > 0.5) {
   grad = mix(uPanelColor, uTopColor, (t - 0.5) / 0.32);
-} else if (t > 0.18) {
-  grad = mix(uLegColor, uPanelColor, (t - 0.18) / 0.32);
+} else {
+  grad = mix(uLegColor, uPanelColor, smoothstep(0.0, 0.42, t));
 }
 diffuseColor.rgb *= grad;`,
       );
   };
 
-  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v7";
+  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v8";
   mesh.material = mat;
 }
 
@@ -671,7 +671,7 @@ function TableModel({
     let alignResult: { groupY: number; projectedNdcY: number } | null = null;
     if (camera instanceof THREE.PerspectiveCamera) {
       alignResult = alignTableBottomToNdc(camera, tablePos[2], calib.counterBottomNdc);
-      alignedY = alignResult.groupY + 0.025;
+      alignedY = alignResult.groupY + 0.03;
     }
 
     setGroupY(alignedY);
