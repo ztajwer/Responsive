@@ -1,8 +1,19 @@
-/** Set NEXT_PUBLIC_WHATSAPP_NUMBER in .env.local (e.g. 923001234567, no + or spaces). */
-const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") ?? "";
+import { siteConfig } from "@/lib/site";
+
+function resolveWhatsAppDigits(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "");
+  if (fromEnv && fromEnv.length >= 8) return fromEnv;
+  return siteConfig.boutiquePhoneWhatsApp;
+}
+
+const WHATSAPP_NUMBER = resolveWhatsAppDigits();
 
 export function isWhatsAppConfigured(): boolean {
   return WHATSAPP_NUMBER.length >= 8;
+}
+
+export function getBoutiquePhoneDisplay(): string {
+  return siteConfig.boutiquePhoneDisplay;
 }
 
 export function buildWhatsAppInquiryUrl(productTitle?: string): string | null {

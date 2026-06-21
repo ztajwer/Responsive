@@ -10,17 +10,17 @@ export const colors = {
   brownMid: "#5C4033",
   goldDeep: "#C9A04A",
   goldMuted: "#B8943F",
-  table: "#D2A57E",
-  tableTop: "#D2A57E",
-  tableLeg: "#D2AE90",
+  table: "#D8AE84",
+  tableTop: "#D8AE84",
+  tableLeg: "#D6B090",
   /** Per-part boutique counter palette */
-  tableCream: "#F0DCC8",
-  tablePeach: "#D2A57E",
-  tableWarm: "#D0AD88",
+  tableCream: "#F5E6D4",
+  tablePeach: "#D8AE84",
+  tableWarm: "#D4A880",
   tableGold: "#D4AF37",
   tableBase: "#A48668",
   /** Bottom gradient anchor — niche se blend */
   tableShade: "#A48668",
   /** Lower side transition toward panel */
-  tableSide: "#B89578",
+  tableSide: "#C4A078",
 } as const;
