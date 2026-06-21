@@ -25,20 +25,18 @@ export function getDeviceProfile(): DeviceProfile {
   return { mobile, lowEnd };
 }
 
-export function getMaxShopProducts(profile: DeviceProfile): number {
-  if (profile.lowEnd) return 3;
-  if (profile.mobile) return 4;
+export function getMaxShopProducts(_profile: DeviceProfile): number {
   return 5;
 }
 
 export function getProductStaggerMs(profile: DeviceProfile): number {
-  return profile.lowEnd ? 1800 : profile.mobile ? 1200 : 900;
+  return profile.lowEnd ? 650 : profile.mobile ? 480 : 380;
 }
 
 export function getProductStartDelayMs(profile: DeviceProfile): number {
-  return profile.lowEnd ? 1600 : profile.mobile ? 1000 : 700;
+  return profile.lowEnd ? 320 : profile.mobile ? 220 : 140;
 }
 
 export function getShopCanvasDelayMs(profile: DeviceProfile): number {
-  return profile.lowEnd ? 1400 : profile.mobile ? 1100 : 800;
+  return profile.lowEnd ? 480 : profile.mobile ? 360 : 280;
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { getDeviceProfile } from "./deviceProfile";
 import { getProductModelUrls, getTableModelUrl } from "./modelAssets";
 
 const bytePrefetched = new Set<string>();
@@ -34,33 +33,32 @@ export function prefetchProductBytes(index: number) {
   if (url) prefetchModelBytes(url);
 }
 
-/** Loader boot: images + table bytes only. Lighter on phones. */
+/** Network-only — all GLB bytes in parallel (safe). */
+export function prefetchAllShopModelBytes() {
+  prefetchTableBytes();
+  getProductModelUrls().forEach((_, index) => prefetchProductBytes(index));
+}
+
+/** Loader boot: images + all model bytes + warm shop chunk. */
 export function bootFastPipeline() {
   if (pipelineStarted) return;
   pipelineStarted = true;
 
-  const { lowEnd } = getDeviceProfile();
-  prefetchTableBytes();
+  prefetchAllShopModelBytes();
 
-  for (const src of [...LOADER_IMAGES, ...DOOR_IMAGES]) {
+  for (const src of [...LOADER_IMAGES, ...DOOR_IMAGES, ...SHOP_IMAGES]) {
     preloadImage(src);
   }
 
-  if (!lowEnd) {
-    for (const src of SHOP_IMAGES) preloadImage(src);
-  }
-
-  if (!lowEnd) {
-    warmShopExperienceModule();
-  }
+  warmShopExperienceModule();
 }
 
-/** Shop opens: warm table bytes; products load one-by-one inside Canvas. */
+/** Shop opens: ensure bytes + images are warm. */
 export function startShopModelLoads() {
   if (shopBytesStarted) return;
   shopBytesStarted = true;
 
-  prefetchTableBytes();
+  prefetchAllShopModelBytes();
   for (const src of SHOP_IMAGES) preloadImage(src);
   warmShopExperienceModule();
 }

@@ -45,7 +45,7 @@ const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
 /** Medium table — center, slightly below middle */
 const TABLE_HEIGHT_FRACTION = 0.26;
-const TABLE_CENTER_NDC_TARGET = -0.28;
+const TABLE_CENTER_NDC_TARGET = -0.35;
 const HOVER_LIFT = 0.044;
 const HOVER_SCALE = 1.12;
 
@@ -498,6 +498,9 @@ function TableProducts({
   useEffect(() => {
     if (visibleCount >= layout.length) return;
     prefetchNextProductBytes(visibleCount);
+    if (visibleCount + 1 < layout.length) {
+      prefetchNextProductBytes(visibleCount + 1);
+    }
     const id = window.setTimeout(() => setVisibleCount((count) => count + 1), staggerMs);
     return () => window.clearTimeout(id);
   }, [visibleCount, layout.length, staggerMs]);

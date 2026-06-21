@@ -12,8 +12,8 @@ interface LoaderProps {
   onComplete: () => void;
 }
 
-const LOADER_DURATION_MS_DEFAULT = 1800;
-const LOADER_DURATION_MS_LOW = 1400;
+const LOADER_DURATION_MS_DEFAULT = 1500;
+const LOADER_DURATION_MS_LOW = 1200;
 const FADE_DURATION_MS = 300;
 
 export default function Loader({ onComplete }: LoaderProps) {
