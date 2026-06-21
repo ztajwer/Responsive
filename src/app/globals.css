@@ -128,6 +128,82 @@ body {
   animation: shopBgKenBurns 52s ease-in-out infinite alternate;
 }
 
+/* Shop enter — dark vignette, then circular light from table center */
+.shop-reveal-overlay {
+  --shop-light-x: 50%;
+  --shop-light-y: 74%;
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.shop-reveal-overlay__dark {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 120% 95% at var(--shop-light-x) var(--shop-light-y),
+    rgba(18, 10, 7, 0.18) 0%,
+    rgba(10, 6, 4, 0.68) 42%,
+    rgba(6, 4, 3, 0.82) 100%
+  );
+  opacity: 0;
+}
+
+.shop-reveal-overlay__light {
+  position: absolute;
+  left: var(--shop-light-x);
+  top: var(--shop-light-y);
+  width: min(52vw, 22rem);
+  height: min(52vw, 22rem);
+  transform: translate(-50%, -50%) scale(0.1);
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(
+    circle,
+    rgba(255, 244, 228, 0.72) 0%,
+    rgba(255, 224, 188, 0.34) 28%,
+    rgba(255, 205, 155, 0.12) 48%,
+    transparent 72%
+  );
+  filter: blur(10px);
+}
+
+.shop-reveal-overlay--live .shop-reveal-overlay__dark {
+  animation: shopRevealDark 3.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.shop-reveal-overlay--live .shop-reveal-overlay__light {
+  animation: shopRevealLight 4.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes shopRevealDark {
+  0% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes shopRevealLight {
+  0% {
+    opacity: 0.92;
+    transform: translate(-50%, -50%) scale(0.1);
+  }
+  35% {
+    opacity: 0.78;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(6.2);
+  }
+}
+
 .shop-table-layer {
   position: absolute;
   inset: 0;
@@ -150,6 +226,10 @@ body {
     animation-name: shopBgKenBurnsMobile;
     animation-duration: 48s;
   }
+
+  .shop-reveal-overlay {
+    --shop-light-y: 78%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -158,6 +238,12 @@ body {
     animation: none !important;
     transition: none !important;
     transform: scale(1) translateZ(0) !important;
+  }
+
+  .shop-reveal-overlay--live .shop-reveal-overlay__dark,
+  .shop-reveal-overlay--live .shop-reveal-overlay__light {
+    animation: none !important;
+    opacity: 0 !important;
   }
 }
 

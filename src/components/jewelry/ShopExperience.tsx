@@ -9,14 +9,19 @@ interface ShopExperienceProps {
 
 export default function ShopExperience({ visible }: ShopExperienceProps) {
   const [bgZoomLive, setBgZoomLive] = useState(false);
+  const [revealLive, setRevealLive] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setBgZoomLive(false);
+      setRevealLive(false);
       return;
     }
     void import("@/lib/modelPreload").then((mod) => mod.startShopModelLoads());
-    const id = window.requestAnimationFrame(() => setBgZoomLive(true));
+    const id = window.requestAnimationFrame(() => {
+      setBgZoomLive(true);
+      setRevealLive(true);
+    });
     return () => window.cancelAnimationFrame(id);
   }, [visible]);
 
@@ -28,6 +33,14 @@ export default function ShopExperience({ visible }: ShopExperienceProps) {
         <div
           className={`shop-experience-bg__zoom${bgZoomLive ? " shop-experience-bg__zoom--live" : ""}`}
         />
+      </div>
+
+      <div
+        className={`shop-reveal-overlay${revealLive ? " shop-reveal-overlay--live" : ""}`}
+        aria-hidden
+      >
+        <div className="shop-reveal-overlay__dark" />
+        <div className="shop-reveal-overlay__light" />
       </div>
 
       <JewelryHome visible={visible} />
