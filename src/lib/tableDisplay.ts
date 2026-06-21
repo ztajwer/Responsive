@@ -120,7 +120,15 @@ function worldSizeFromPixels(
   return (pixels / viewportHeight) * visibleHeight;
 }
 
-const PRODUCT_SIZE_BOOST_PX = 14;
+const PRODUCT_SIZE_BOOST_PX = { mobile: 18, tablet: 28, desktop: 42 } as const;
+
+function getProductSizeBoostPx(viewportWidth: number): number {
+  if (viewportWidth >= 1024) return PRODUCT_SIZE_BOOST_PX.desktop;
+  if (viewportWidth >= 768) return PRODUCT_SIZE_BOOST_PX.tablet;
+  return PRODUCT_SIZE_BOOST_PX.mobile;
+}
+
+const PRODUCT_DISPLAY_MULTIPLIER = 3;
 
 function getBoostedProductDisplaySize(
   baseSize: number,
@@ -128,7 +136,9 @@ function getBoostedProductDisplaySize(
   viewportHeight: number,
 ): number {
   const cam = getTableCamera(viewportWidth);
-  return baseSize + worldSizeFromPixels(PRODUCT_SIZE_BOOST_PX, viewportHeight, cam.fov, cam.position[2]);
+  const boosted =
+    baseSize + worldSizeFromPixels(getProductSizeBoostPx(viewportWidth), viewportHeight, cam.fov, cam.position[2]);
+  return boosted * PRODUCT_DISPLAY_MULTIPLIER;
 }
 
 /** Product height from counter width — one target span for equal on-screen presence */
@@ -140,7 +150,7 @@ export function getProductDisplaySize(
   if (!tableTopWidth || tableTopWidth <= 0) return 0.06;
   const mobile = viewportWidth < 768;
   const tablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const factor = mobile ? 0.19 : tablet ? 0.17 : 0.22;
+  const factor = mobile ? 0.23 : tablet ? 0.27 : 0.34;
   return tableTopWidth * factor;
 }
 
