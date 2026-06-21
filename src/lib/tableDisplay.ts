@@ -1,16 +1,16 @@
-/** Slight top-down front view — products visible on table surface */
-export const TABLE_POLAR_ANGLE = 1.38;
+/** Front-ish view — table face visible, slightly from above */
+export const TABLE_POLAR_ANGLE = 1.32;
 
 export const TABLE_DISPLAY = {
   position: {
-    mobile: [0, 0, 0.46] as [number, number, number],
-    tablet: [0, 0, 0.44] as [number, number, number],
-    desktop: [0, 0, 0.42] as [number, number, number],
+    mobile: [0, -0.02, 0.46] as [number, number, number],
+    tablet: [0, -0.02, 0.44] as [number, number, number],
+    desktop: [0, -0.02, 0.42] as [number, number, number],
   },
   target: {
-    mobile: [0, 0.18, 0.46] as [number, number, number],
-    tablet: [0, 0.16, 0.44] as [number, number, number],
-    desktop: [0, 0.14, 0.42] as [number, number, number],
+    mobile: [0, 0.08, 0.46] as [number, number, number],
+    tablet: [0, 0.07, 0.44] as [number, number, number],
+    desktop: [0, 0.06, 0.42] as [number, number, number],
   },
   scale: {
     mobile: 0.38,
@@ -18,9 +18,9 @@ export const TABLE_DISPLAY = {
     desktop: 0.3,
   },
   camera: {
-    mobile: { position: [0, 0.34, 1.88] as [number, number, number], fov: 34 },
-    tablet: { position: [0, 0.32, 2.05] as [number, number, number], fov: 32 },
-    desktop: { position: [0, 0.3, 2.22] as [number, number, number], fov: 30 },
+    mobile: { position: [0, 0.26, 2.02] as [number, number, number], fov: 33 },
+    tablet: { position: [0, 0.24, 2.12] as [number, number, number], fov: 31 },
+    desktop: { position: [0, 0.22, 2.28] as [number, number, number], fov: 30 },
   },
   shadow: {
     scale: { mobile: 1.85, tablet: 1.55, desktop: 1.4 },

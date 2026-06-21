@@ -3,7 +3,7 @@ export interface DeviceProfile {
   lowEnd: boolean;
 }
 
-/** Detect phones and weak GPUs (≤4GB RAM or ≤4 cores). */
+/** Phones vs weak GPUs (not every phone is low-end). */
 export function getDeviceProfile(): DeviceProfile {
   if (typeof window === "undefined") {
     return { mobile: false, lowEnd: false };
@@ -14,34 +14,32 @@ export function getDeviceProfile(): DeviceProfile {
     /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
   const nav = navigator as Navigator & { deviceMemory?: number };
-  const lowMemory = typeof nav.deviceMemory === "number" && nav.deviceMemory <= 4;
-  const lowCores =
-    typeof navigator.hardwareConcurrency === "number" &&
-    navigator.hardwareConcurrency > 0 &&
-    navigator.hardwareConcurrency <= 4;
+  const memory = nav.deviceMemory;
+  const cores = navigator.hardwareConcurrency;
 
-  const lowEnd = mobile || lowMemory || lowCores;
+  const lowMemory = typeof memory === "number" && memory <= 3;
+  const lowCores =
+    typeof cores === "number" && cores > 0 && cores <= 4 && mobile && typeof memory !== "number";
+
+  const lowEnd = lowMemory || lowCores;
 
   return { mobile, lowEnd };
 }
 
-/** Fewer products on weak GPUs — avoids context lost. */
 export function getMaxShopProducts(profile: DeviceProfile): number {
   if (profile.lowEnd) return 3;
   if (profile.mobile) return 4;
   return 5;
 }
 
-/** Balance: fast enough feel, safe GPU parse cadence. */
 export function getProductStaggerMs(profile: DeviceProfile): number {
-  return profile.lowEnd ? 1100 : profile.mobile ? 850 : 650;
+  return profile.lowEnd ? 950 : profile.mobile ? 720 : 550;
 }
 
 export function getProductStartDelayMs(profile: DeviceProfile): number {
-  return profile.lowEnd ? 700 : profile.mobile ? 520 : 360;
+  return profile.lowEnd ? 550 : profile.mobile ? 380 : 260;
 }
 
-/** Let door WebGL release before shop canvas mounts. */
-export function getShopCanvasDelayMs(profile: DeviceProfile): number {
-  return profile.lowEnd ? 900 : profile.mobile ? 680 : 520;
+export function getShopCanvasDelayMs(_profile: DeviceProfile): number {
+  return 120;
 }

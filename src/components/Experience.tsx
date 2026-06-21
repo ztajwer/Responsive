@@ -18,7 +18,7 @@ import {
   stopBoutiqueAudio,
 } from "@/lib/boutiqueAudio";
 import { warmShopExperienceModule, prefetchShopBytesOnDoor } from "@/lib/modelPreload";
-import { getDeviceProfile, getShopCanvasDelayMs } from "@/lib/deviceProfile";
+import { getDeviceProfile } from "@/lib/deviceProfile";
 import { useScrollDoorProgress } from "@/hooks/useScrollDoorProgress";
 
 const ShopExperience = dynamic(() => import("./jewelry/ShopExperience"), {
@@ -28,7 +28,6 @@ const ShopExperience = dynamic(() => import("./jewelry/ShopExperience"), {
 
 function ExperienceInner() {
   const [ready, setReady] = useState(false);
-  const [shopCanvasReady, setShopCanvasReady] = useState(false);
   const [scrollModalOpen, setScrollModalOpen] = useState(false);
   const [showCursorGlitter, setShowCursorGlitter] = useState(false);
   const {
@@ -87,29 +86,19 @@ function ExperienceInner() {
   }, []);
 
   useEffect(() => {
+    if (!ready || entered || doorProgress < 0.35) return;
+    prefetchShopBytesOnDoor();
+    warmShopExperienceModule();
+  }, [ready, entered, doorProgress]);
+
+  useEffect(() => {
     if (!ready) return;
     preloadBoutiqueAudio();
     warmShopExperienceModule();
   }, [ready]);
 
   useEffect(() => {
-    if (!ready || entered || doorProgress < 0.4) return;
-    prefetchShopBytesOnDoor();
-    if (!getDeviceProfile().lowEnd) warmShopExperienceModule();
-  }, [ready, entered, doorProgress]);
-
-  useEffect(() => {
     if (entered) stopBoutiqueAudio();
-  }, [entered]);
-
-  useEffect(() => {
-    if (!entered) {
-      setShopCanvasReady(false);
-      return;
-    }
-    const delay = getShopCanvasDelayMs(getDeviceProfile());
-    const id = window.setTimeout(() => setShopCanvasReady(true), delay);
-    return () => window.clearTimeout(id);
   }, [entered]);
 
   useEffect(() => {
@@ -163,7 +152,7 @@ function ExperienceInner() {
 
       {onDoorScreen && <DoorBackground fadeProgress={doorProgress} />}
 
-      {ready && entered && shopCanvasReady && <ShopExperience visible={entered} />}
+      {ready && entered && <ShopExperience visible={entered} />}
 
       {onDoorScreen && (
         <DoorSceneCanvas

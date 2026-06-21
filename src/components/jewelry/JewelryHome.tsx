@@ -25,7 +25,7 @@ import {
 import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
 import { colors } from "@/lib/colors";
 import { optimizeModelForGpu } from "@/lib/gpuModelOptimize";
-import { prefetchNextProductBytes } from "@/lib/modelPreload";
+import { prefetchNextProductBytes, onTableReadyForProducts } from "@/lib/modelPreload";
 import {
   getDeviceProfile,
   getMaxShopProducts,
@@ -43,9 +43,10 @@ const tableViewOffsetRef = { width: 0, height: 0, offsetY: 0 };
 
 const TABLE_COLOR = colors.table;
 const TABLE_LEG_COLOR = colors.tableLeg;
-/** Medium table — center, slightly below middle */
-const TABLE_HEIGHT_FRACTION = 0.26;
-const TABLE_CENTER_NDC_TARGET = -0.35;
+/** Medium table — lower on screen, front view */
+const TABLE_HEIGHT_FRACTION = 0.3;
+const TABLE_CENTER_NDC_TARGET = -0.42;
+const LOAD_TIMEOUT_MS = 90000;
 const HOVER_LIFT = 0.044;
 const HOVER_SCALE = 1.12;
 
@@ -117,7 +118,7 @@ function applyTableMaterials(root: THREE.Object3D) {
 
       const isLeg = name.includes("leg") || name.includes("base") || name.includes("bottom");
       mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
-      mat.color.offsetHSL(0, 0.04, 0.06);
+      mat.color.offsetHSL(0, -0.02, 0.1);
 
       if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
         mat.emissive.set("#FFF6EA").multiplyScalar(isLeg ? 0.015 : 0.022);
@@ -497,8 +498,10 @@ function TableProducts({
 
   useEffect(() => {
     if (visibleCount >= layout.length) return;
-    prefetchNextProductBytes(visibleCount);
-    const id = window.setTimeout(() => setVisibleCount((count) => count + 1), staggerMs);
+    const id = window.setTimeout(() => {
+      prefetchNextProductBytes(visibleCount);
+      setVisibleCount((count) => count + 1);
+    }, staggerMs);
     return () => window.clearTimeout(id);
   }, [visibleCount, layout.length, staggerMs]);
 
@@ -720,21 +723,27 @@ function TableScene({
   );
 }
 
-function TableLoader() {
+function TableLoader({ slow }: { slow?: boolean }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-8 z-10 flex justify-center">
-      <div className="h-px w-20 bg-gradient-to-r from-transparent via-maj-gold/80 to-transparent" />
+    <div className="pointer-events-none absolute inset-x-0 bottom-16 z-20 flex flex-col items-center gap-3">
+      <div className="h-px w-24 bg-gradient-to-r from-transparent via-maj-gold/80 to-transparent" />
+      <p className="font-sans text-[9px] uppercase tracking-[0.28em] text-maj-brown/70">
+        {slow ? "Still loading 3D… check connection" : "Loading boutique 3D"}
+      </p>
     </div>
   );
 }
 
 export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps) {
   const [tableReady, setTableReady] = useState(false);
+  const [loadSlow, setLoadSlow] = useState(false);
   const [profile, setProfile] = useState<DeviceProfile>(() => getDeviceProfile());
   const [gpuLost, setGpuLost] = useState(false);
   const layerRef = useRef<HTMLDivElement>(null);
   const handleReady = useCallback(() => {
     setTableReady(true);
+    setLoadSlow(false);
+    onTableReadyForProducts();
     onTableReady?.();
   }, [onTableReady]);
 
@@ -744,6 +753,19 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
     window.addEventListener("resize", sync);
     return () => window.removeEventListener("resize", sync);
   }, []);
+
+  useEffect(() => {
+    if (!visible || tableReady) {
+      setLoadSlow(false);
+      return;
+    }
+    const slowId = window.setTimeout(() => setLoadSlow(true), 20000);
+    const failId = window.setTimeout(() => setGpuLost(true), LOAD_TIMEOUT_MS);
+    return () => {
+      window.clearTimeout(slowId);
+      window.clearTimeout(failId);
+    };
+  }, [visible, tableReady]);
 
   useEffect(() => {
     const el = layerRef.current;
@@ -764,7 +786,7 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
         cursor: visible && tableReady ? "grab" : "default",
       }}
     >
-      {visible && !tableReady && !gpuLost && <TableLoader />}
+      {visible && !tableReady && !gpuLost && <TableLoader slow={loadSlow} />}
 
       {gpuLost && (
         <div className="absolute inset-x-0 bottom-24 z-20 flex justify-center px-6">
@@ -783,7 +805,7 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
         dpr={1}
         className="h-full w-full"
         gl={{
-          antialias: !profile.lowEnd,
+          antialias: false,
           alpha: true,
           powerPreference: "default",
           stencil: false,
