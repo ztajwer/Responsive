@@ -895,7 +895,7 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
       setLoadSlow(false);
       return;
     }
-    const slowId = window.setTimeout(() => setLoadSlow(true), 20000);
+    const slowId = window.setTimeout(() => setLoadSlow(true), 45000);
     const failId = window.setTimeout(() => setGpuLost(true), LOAD_TIMEOUT_MS);
     return () => {
       window.clearTimeout(slowId);

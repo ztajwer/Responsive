@@ -78,9 +78,9 @@ function ExperienceInner() {
   }, []);
 
   useEffect(() => {
-    if (!ready || entered || doorProgress < 0.35) return;
+    if (!ready || entered) return;
     void import("@/lib/modelPreload").then((mod) => mod.prefetchShopBytesOnDoor());
-  }, [ready, entered, doorProgress]);
+  }, [ready, entered]);
 
   useEffect(() => {
     if (!ready) return;

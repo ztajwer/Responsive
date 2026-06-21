@@ -1,4 +1,4 @@
-import { getProductModelUrls, getTableModelUrl } from "./modelAssets";
+import { extendGltfLoader, getProductModelUrls, getTableModelUrl } from "./modelAssets";
 
 const bytePrefetched = new Set<string>();
 let pipelineStarted = false;
@@ -9,14 +9,23 @@ const SHOP_IMAGES = ["/background.png", "/main_mob_bg.png"] as const;
 const DOOR_IMAGES = ["/door_sm.png", "/door_bg.png"] as const;
 const LOADER_IMAGES = ["/bg.png", "/logo_outline.png", "/wh_logo-removebg-preview.png"] as const;
 
-/** One GLB download at a time — table always wins, no bandwidth fight. */
+/** Parse into drei cache after bytes are in HTTP cache — shop mount is instant when ready. */
+function triggerGltfPreload(url: string) {
+  void import("@react-three/drei").then(({ useGLTF }) => {
+    useGLTF.preload(url, false, false, extendGltfLoader);
+  });
+}
+
+/** One GLB at a time: download → parse, then next (runs during loader + door scroll). */
 function enqueueModelBytes(url: string) {
   if (bytePrefetched.has(url) || typeof window === "undefined") return;
   bytePrefetched.add(url);
 
   prefetchChain = prefetchChain
     .then(() =>
-      fetch(url, { mode: "cors", cache: "force-cache" }).then(() => undefined),
+      fetch(url, { mode: "cors", cache: "force-cache" }).then(() => {
+        triggerGltfPreload(url);
+      }),
     )
     .catch(() => undefined);
 }
@@ -25,6 +34,16 @@ function preloadImage(src: string) {
   if (typeof window === "undefined") return;
   const img = new window.Image();
   img.src = src;
+}
+
+function queueAllShopGlbBytes() {
+  prefetchTableBytes();
+  const seen = new Set<string>();
+  for (const url of getProductModelUrls()) {
+    if (seen.has(url)) continue;
+    seen.add(url);
+    enqueueModelBytes(url);
+  }
 }
 
 export function prefetchTableBytes() {
@@ -42,41 +61,38 @@ export function prefetchNextProductBytes(index: number) {
   prefetchProductBytes(index);
 }
 
-/** Loader: table bytes only + images + warm shop code. */
+/**
+ * Loader first paint — queue table + all 5 products (download & parse while loader/doors run).
+ */
 export function bootFastPipeline() {
   if (pipelineStarted) return;
   pipelineStarted = true;
 
-  prefetchTableBytes();
+  queueAllShopGlbBytes();
 
   for (const src of [...LOADER_IMAGES, ...DOOR_IMAGES, ...SHOP_IMAGES]) {
     preloadImage(src);
   }
 }
 
-/** Door scroll: warm shop images + table bytes. */
+/** Door screen — ensure full pipeline + shop PNGs (idempotent). */
 export function prefetchShopBytesOnDoor() {
-  prefetchTableBytes();
+  bootFastPipeline();
   for (const src of SHOP_IMAGES) preloadImage(src);
 }
 
-/** Shop opens: table GLB first, then first two product files. */
+/** Shop opens — pipeline already running from loader; no-op guard. */
 export function startShopModelLoads() {
   if (shopStarted) return;
   shopStarted = true;
-
-  prefetchTableBytes();
-  prefetchProductBytes(0);
-  window.setTimeout(() => prefetchProductBytes(1), 400);
+  bootFastPipeline();
 }
 
 export function prefetchAllProductBytes() {
-  getProductModelUrls().forEach((_, index) => {
-    window.setTimeout(() => prefetchProductBytes(index), index * 320);
-  });
+  getProductModelUrls().forEach((url) => enqueueModelBytes(url));
 }
 
-/** After table renders, queue all product files. */
+/** After table renders — ensure any missing product files are queued. */
 export function onTableReadyForProducts() {
   prefetchAllProductBytes();
 }
