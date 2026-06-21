@@ -25,18 +25,23 @@ export function getDeviceProfile(): DeviceProfile {
   return { mobile, lowEnd };
 }
 
-export function getMaxShopProducts(_profile: DeviceProfile): number {
+/** Fewer products on weak GPUs — avoids context lost. */
+export function getMaxShopProducts(profile: DeviceProfile): number {
+  if (profile.lowEnd) return 3;
+  if (profile.mobile) return 4;
   return 5;
 }
 
+/** Balance: fast enough feel, safe GPU parse cadence. */
 export function getProductStaggerMs(profile: DeviceProfile): number {
-  return profile.lowEnd ? 650 : profile.mobile ? 480 : 380;
+  return profile.lowEnd ? 1100 : profile.mobile ? 850 : 650;
 }
 
 export function getProductStartDelayMs(profile: DeviceProfile): number {
-  return profile.lowEnd ? 320 : profile.mobile ? 220 : 140;
+  return profile.lowEnd ? 700 : profile.mobile ? 520 : 360;
 }
 
+/** Let door WebGL release before shop canvas mounts. */
 export function getShopCanvasDelayMs(profile: DeviceProfile): number {
-  return profile.lowEnd ? 480 : profile.mobile ? 360 : 280;
+  return profile.lowEnd ? 900 : profile.mobile ? 680 : 520;
 }

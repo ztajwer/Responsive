@@ -498,9 +498,6 @@ function TableProducts({
   useEffect(() => {
     if (visibleCount >= layout.length) return;
     prefetchNextProductBytes(visibleCount);
-    if (visibleCount + 1 < layout.length) {
-      prefetchNextProductBytes(visibleCount + 1);
-    }
     const id = window.setTimeout(() => setVisibleCount((count) => count + 1), staggerMs);
     return () => window.clearTimeout(id);
   }, [visibleCount, layout.length, staggerMs]);

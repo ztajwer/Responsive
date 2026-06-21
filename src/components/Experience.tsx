@@ -17,7 +17,7 @@ import {
   startBoutiqueAudioFromGesture,
   stopBoutiqueAudio,
 } from "@/lib/boutiqueAudio";
-import { warmShopExperienceModule, prefetchAllShopModelBytes } from "@/lib/modelPreload";
+import { warmShopExperienceModule, prefetchShopBytesOnDoor } from "@/lib/modelPreload";
 import { getDeviceProfile, getShopCanvasDelayMs } from "@/lib/deviceProfile";
 import { useScrollDoorProgress } from "@/hooks/useScrollDoorProgress";
 
@@ -93,9 +93,9 @@ function ExperienceInner() {
   }, [ready]);
 
   useEffect(() => {
-    if (!ready || entered || doorProgress < 0.3) return;
-    prefetchAllShopModelBytes();
-    warmShopExperienceModule();
+    if (!ready || entered || doorProgress < 0.4) return;
+    prefetchShopBytesOnDoor();
+    if (!getDeviceProfile().lowEnd) warmShopExperienceModule();
   }, [ready, entered, doorProgress]);
 
   useEffect(() => {
