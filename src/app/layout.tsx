@@ -98,6 +98,12 @@ export default function RootLayout({
         />
         <link
           rel="preload"
+          href="/table-3d.glb"
+          as="fetch"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
           href={`${GLB_CDN_BASE}/${SHOP_GLB_FILES[0]}`}
           as="fetch"
           crossOrigin="anonymous"

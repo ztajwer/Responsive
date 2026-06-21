@@ -864,7 +864,7 @@ function TableLoader({ slow }: { slow?: boolean }) {
     <div className="pointer-events-none absolute inset-x-0 bottom-16 z-20 flex flex-col items-center gap-3">
       <div className="h-px w-24 bg-gradient-to-r from-transparent via-maj-gold/80 to-transparent" />
       <p className="font-sans text-[9px] uppercase tracking-[0.28em] text-maj-brown/70">
-        {slow ? "Still loading 3D… check connection" : "Loading boutique 3D"}
+        {slow ? "Still loading 3D models…" : "Loading boutique 3D"}
       </p>
     </div>
   );
@@ -964,7 +964,7 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
         }}
       >
         <Suspense fallback={null}>
-          <TableScene onReady={handleReady} showProducts={tableReady} profile={profile} />
+          <TableScene onReady={handleReady} showProducts={visible} profile={profile} />
         </Suspense>
       </Canvas>
     </div>
