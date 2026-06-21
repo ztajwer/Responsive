@@ -10,13 +10,13 @@ export const colors = {
   brownMid: "#5C4033",
   goldDeep: "#C9A04A",
   goldMuted: "#B8943F",
-  table: "#E8C9A8",
-  tableTop: "#E8C9A8",
-  tableLeg: "#E8C9A8",
-  /** Lighter boutique counter tone */
-  tableCream: "#F2DCC4",
-  tablePeach: "#E8C9A8",
-  tableWarm: "#E0C09A",
-  tableGold: "#E8C9A8",
-  tableBase: "#D9B896",
+  table: "#D2A57E",
+  tableTop: "#D2A57E",
+  tableLeg: "#D2A57E",
+  /** Boutique counter — slightly lighter warm tan */
+  tableCream: "#D9B896",
+  tablePeach: "#D2A57E",
+  tableWarm: "#C9A67A",
+  tableGold: "#D2A57E",
+  tableBase: "#BE9370",
 } as const;

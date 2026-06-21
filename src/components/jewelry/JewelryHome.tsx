@@ -218,7 +218,7 @@ diffuseColor.rgb *= grad;`,
       );
   };
 
-  mat.customProgramCacheKey = () => "maj-table-uniform-e8c9a8-v3";
+  mat.customProgramCacheKey = () => "maj-table-uniform-d2a57e-v6";
   mesh.material = mat;
 }
 

@@ -1,4 +1,6 @@
 /** Front-ish view — table face visible, slightly from above */
+import { isCompactProductUrl, PRODUCT_SIZE_OFFSET_PX } from "./modelAssets";
+
 export const TABLE_POLAR_ANGLE = 1.32;
 
 export const TABLE_DISPLAY = {
@@ -129,8 +131,24 @@ export function getProductDisplaySize(
   if (!tableTopWidth || tableTopWidth <= 0) return 0.06;
   const mobile = viewportWidth < 768;
   const tablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const factor = mobile ? 0.15 : tablet ? 0.13 : 0.11;
+  const factor = mobile ? 0.17 : tablet ? 0.15 : 0.13;
   return tableTopWidth * factor;
+}
+
+/** Per-model size tweak — ring/bracelet −5px screen, others slightly larger */
+export function getProductDisplaySizeForModel(
+  baseSize: number,
+  modelUrl: string,
+  viewportWidth: number,
+  viewportHeight: number,
+): number {
+  const cam = getTableCamera(viewportWidth);
+  const pxWorld = (px: number) =>
+    worldSizeFromPixels(px, viewportHeight, cam.fov, cam.position[2]);
+
+  const isCompact = isCompactProductUrl(modelUrl);
+  const offsetPx = isCompact ? PRODUCT_SIZE_OFFSET_PX.compact : PRODUCT_SIZE_OFFSET_PX.default;
+  return Math.max(baseSize * 0.72, baseSize + pxWorld(offsetPx));
 }
 
 export interface ProductLayoutItem {
@@ -178,11 +196,17 @@ export function getProductArcLayout(
     const angle = (t - 0.5) * arcSpan;
     const x = centerX + Math.sin(angle) * radius;
     const zCurve = (1 - Math.cos(angle)) * arcDepth;
+    const itemSize = getProductDisplaySizeForModel(
+      displaySize,
+      url,
+      viewportWidth,
+      viewportHeight,
+    );
     return {
       url,
       position: [x, onTableY, zBase - zCurve],
       rotation: [0, -angle * 0.42, 0],
-      displaySize,
+      displaySize: itemSize,
     };
   });
 }

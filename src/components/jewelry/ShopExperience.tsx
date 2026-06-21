@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import JewelryHome from "./JewelryHome";
 
 interface ShopExperienceProps {
@@ -8,9 +8,16 @@ interface ShopExperienceProps {
 }
 
 export default function ShopExperience({ visible }: ShopExperienceProps) {
+  const [bgZoomLive, setBgZoomLive] = useState(false);
+
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      setBgZoomLive(false);
+      return;
+    }
     void import("@/lib/modelPreload").then((mod) => mod.startShopModelLoads());
+    const id = window.requestAnimationFrame(() => setBgZoomLive(true));
+    return () => window.cancelAnimationFrame(id);
   }, [visible]);
 
   if (!visible) return null;
@@ -18,7 +25,9 @@ export default function ShopExperience({ visible }: ShopExperienceProps) {
   return (
     <div className="shop-experience fixed inset-0 z-[40] overflow-hidden">
       <div className="shop-experience-bg" aria-hidden style={{ pointerEvents: "none" }}>
-        <div className="shop-experience-bg__zoom" />
+        <div
+          className={`shop-experience-bg__zoom${bgZoomLive ? " shop-experience-bg__zoom--live" : ""}`}
+        />
       </div>
 
       <JewelryHome visible={visible} />

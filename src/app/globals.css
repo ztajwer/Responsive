@@ -78,21 +78,21 @@ body {
 }
 
 /* Shop home — background images (loader styles above are untouched) */
-@keyframes shopBgZoom {
+@keyframes shopBgKenBurns {
   0% {
-    transform: scale(1);
+    transform: scale(1.04) translateZ(0);
   }
   100% {
-    transform: scale(1.06);
+    transform: scale(1.11) translateZ(0);
   }
 }
 
-@keyframes shopBgZoomMobile {
+@keyframes shopBgKenBurnsMobile {
   0% {
-    transform: scale(1);
+    transform: scale(1.05) translateZ(0);
   }
   100% {
-    transform: scale(1.08);
+    transform: scale(1.13) translateZ(0);
   }
 }
 
@@ -112,14 +112,20 @@ body {
 
 .shop-experience-bg__zoom {
   position: absolute;
-  inset: -12%;
+  inset: -20%;
+  transform: scale(1) translateZ(0);
   transform-origin: center center;
-  animation: shopBgZoom 28s cubic-bezier(0.22, 0.61, 0.36, 1) infinite alternate;
+  transition: transform 2.8s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
+  backface-visibility: hidden;
   background-image: url("/background.png");
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
+}
+
+.shop-experience-bg__zoom--live {
+  animation: shopBgKenBurns 52s ease-in-out infinite alternate;
 }
 
 .shop-table-layer {
@@ -135,10 +141,23 @@ body {
 
 @media (max-width: 767px) {
   .shop-experience-bg__zoom {
-    inset: -13%;
-    animation: shopBgZoomMobile 28s cubic-bezier(0.22, 0.61, 0.36, 1) infinite alternate;
+    inset: -22%;
     background-image: url("/main_mob_bg.png");
     background-position: center 58%;
+  }
+
+  .shop-experience-bg__zoom--live {
+    animation-name: shopBgKenBurnsMobile;
+    animation-duration: 48s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-experience-bg__zoom,
+  .shop-experience-bg__zoom--live {
+    animation: none !important;
+    transition: none !important;
+    transform: scale(1) translateZ(0) !important;
   }
 }
 
