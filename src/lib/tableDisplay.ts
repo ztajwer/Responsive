@@ -15,7 +15,7 @@ export const TABLE_DISPLAY = {
   scale: {
     mobile: 0.35,
     tablet: 0.29,
-    desktop: 0.31,
+    desktop: 0.37,
   },
   camera: {
     mobile: { position: [0, 0.26, 2.02] as [number, number, number], fov: 33 },
@@ -140,7 +140,7 @@ export function getProductDisplaySize(
   if (!tableTopWidth || tableTopWidth <= 0) return 0.06;
   const mobile = viewportWidth < 768;
   const tablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const factor = mobile ? 0.19 : tablet ? 0.17 : 0.18;
+  const factor = mobile ? 0.19 : tablet ? 0.17 : 0.22;
   return tableTopWidth * factor;
 }
 

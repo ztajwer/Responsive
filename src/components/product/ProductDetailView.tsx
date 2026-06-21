@@ -14,7 +14,7 @@ import { getBoutiquePhoneDisplay, openWhatsAppInquiry } from "@/lib/whatsapp";
 const ProductDetailCanvas = dynamic(() => import("@/components/product/ProductDetailCanvas"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full min-h-[52dvh] w-full items-center justify-center lg:min-h-0">
+    <div className="flex h-full min-h-[88dvh] w-full items-center justify-center lg:min-h-0">
       <p className="font-display text-sm italic tracking-[0.22em] text-maj-brown/45">Presenting piece…</p>
     </div>
   ),
@@ -78,10 +78,10 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
         Back to Boutique
       </Link>
 
-      <div className="relative mx-auto flex min-h-[110dvh] w-full max-w-[1480px] flex-col lg:flex-row lg:items-stretch">
+      <div className="relative mx-auto flex min-h-[185dvh] w-full max-w-[1480px] flex-col lg:min-h-[130dvh] lg:flex-row lg:items-stretch">
         {/* Left — 3D product stage */}
-        <section className="relative flex min-h-[64dvh] flex-1 flex-col justify-center px-2 pb-4 pt-14 sm:min-h-[70dvh] sm:px-4 sm:pt-16 lg:min-h-[105dvh] lg:px-8 lg:pb-10 lg:pt-20">
-          <div className="relative mx-auto h-[min(64dvh,580px)] w-full max-w-3xl sm:h-[min(70dvh,640px)] lg:h-[min(88vh,860px)] lg:max-w-none">
+        <section className="relative flex min-h-[88dvh] flex-1 flex-col justify-center px-2 pb-6 pt-14 sm:min-h-[95dvh] sm:px-4 sm:pt-16 lg:min-h-[130dvh] lg:px-8 lg:pb-12 lg:pt-20">
+          <div className="relative mx-auto h-[min(88dvh,980px)] w-full max-w-3xl sm:h-[min(95dvh,1080px)] lg:h-[min(96vh,1120px)] lg:max-w-none">
             {mounted ? <ProductDetailCanvas product={product} displaySize={displaySize} /> : null}
           </div>
           <p className="pointer-events-none mt-3 text-center font-sans text-[8px] uppercase tracking-[0.38em] text-maj-brown/42 sm:text-[9px]">
