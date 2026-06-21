@@ -8,22 +8,22 @@
 export const SHOP_LAYOUT_CALIB = {
   mobile: {
     /** Slightly above bottom */
-    counterBottomNdc: -0.75,
-    productLift: 0.004,
+    counterBottomNdc: -0.68,
+    productLift: 0.02,
     productRowSpanFactor: 0.76,
     productHeightFactor: 0.13,
     viewOffsetMax: 0.92,
   },
   tablet: {
-    counterBottomNdc: -0.74,
-    productLift: 0.004,
+    counterBottomNdc: -0.67,
+    productLift: 0.02,
     productRowSpanFactor: 0.76,
     productHeightFactor: 0.12,
     viewOffsetMax: 0.88,
   },
   desktop: {
-    counterBottomNdc: -0.73,
-    productLift: 0.005,
+    counterBottomNdc: -0.66,
+    productLift: 0.022,
     productRowSpanFactor: 0.74,
     productHeightFactor: 0.11,
     viewOffsetMax: 0.85,

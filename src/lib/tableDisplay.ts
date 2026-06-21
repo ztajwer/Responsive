@@ -13,9 +13,9 @@ export const TABLE_DISPLAY = {
     desktop: [0, 0.04, 0.42] as [number, number, number],
   },
   scale: {
-    mobile: 0.38,
-    tablet: 0.32,
-    desktop: 0.3,
+    mobile: 0.35,
+    tablet: 0.29,
+    desktop: 0.275,
   },
   camera: {
     mobile: { position: [0, 0.26, 2.02] as [number, number, number], fov: 33 },
@@ -37,21 +37,21 @@ export const SHOP_DISPLAY_ANCHOR = {
     surfaceY: 0.058,
     topWidth: 0.32,
     forwardZ: 0.508,
-    displaySize: 0.032,
+    displaySize: 0.027,
     viewOffsetY: 0.2,
   },
   tablet: {
     surfaceY: 0.052,
     topWidth: 0.3,
     forwardZ: 0.492,
-    displaySize: 0.028,
+    displaySize: 0.023,
     viewOffsetY: 0.15,
   },
   desktop: {
     surfaceY: 0.048,
     topWidth: 0.28,
     forwardZ: 0.478,
-    displaySize: 0.026,
+    displaySize: 0.021,
     viewOffsetY: 0.1,
   },
 } as const;
@@ -129,7 +129,7 @@ export function getProductDisplaySize(
   if (!tableTopWidth || tableTopWidth <= 0) return 0.06;
   const mobile = viewportWidth < 768;
   const tablet = viewportWidth >= 768 && viewportWidth < 1024;
-  const factor = mobile ? 0.22 : tablet ? 0.2 : 0.18;
+  const factor = mobile ? 0.15 : tablet ? 0.13 : 0.11;
   return tableTopWidth * factor;
 }
 
@@ -138,6 +138,53 @@ export interface ProductLayoutItem {
   position: [number, number, number];
   rotation: [number, number, number];
   displaySize: number;
+}
+
+/** Round arc — 5 products on table top, even spacing along curved front */
+export function getProductArcLayout(
+  surfaceY: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  displaySize: number,
+  modelUrls: readonly string[],
+  tableTopWidth?: number,
+  forwardZ?: number,
+  centerX = 0,
+  liftAboveTable = 0.002,
+  extraLiftPx = 100,
+): ProductLayoutItem[] {
+  const count = modelUrls.length;
+  const tablePos = getTablePosition(viewportWidth);
+  const cam = getTableCamera(viewportWidth);
+  const topWidth = tableTopWidth && tableTopWidth > 0 ? tableTopWidth : displaySize * 3.2;
+  const zBase = forwardZ ?? tablePos[2] + (viewportWidth < 768 ? 0.038 : 0.044);
+  const pixelLift = worldSizeFromPixels(
+    extraLiftPx,
+    viewportHeight,
+    cam.fov,
+    cam.position[2],
+  );
+
+  const edgeInset = displaySize * 0.48;
+  const arcSpan = count >= 5 ? 0.78 : 0.68;
+  const halfAngle = arcSpan / 2;
+  const halfChord = Math.max(0.04, topWidth * 0.47 - edgeInset);
+  const radius = halfChord / Math.sin(halfAngle);
+  const arcDepth = topWidth * 0.085;
+  const onTableY = surfaceY + liftAboveTable + displaySize * 0.018 + pixelLift;
+
+  return modelUrls.map((url, index) => {
+    const t = count > 1 ? index / (count - 1) : 0.5;
+    const angle = (t - 0.5) * arcSpan;
+    const x = centerX + Math.sin(angle) * radius;
+    const zCurve = (1 - Math.cos(angle)) * arcDepth;
+    return {
+      url,
+      position: [x, onTableY, zBase - zCurve],
+      rotation: [0, -angle * 0.42, 0],
+      displaySize,
+    };
+  });
 }
 
 /** Straight row — equal spacing on table top, centered with optional pixel-calibrated 3D gap */

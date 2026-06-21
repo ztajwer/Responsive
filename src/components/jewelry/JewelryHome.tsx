@@ -12,8 +12,8 @@ import {
 import * as THREE from "three";
 import {
   TABLE_POLAR_ANGLE,
+  getProductArcLayout,
   getProductDisplaySize,
-  getProductRowLayout,
   getShopDisplayAnchor,
   getTableCamera,
   getTablePosition,
@@ -106,12 +106,13 @@ const HOVER_LIFT = 0.014;
 const HOVER_SCALE = 1.07;
 
 const THEME_TABLE = {
-  top: colors.goldLight,
-  leg: colors.goldDeep,
-  gold: colors.gold,
-  rose: colors.goldMuted,
-  panel: colors.gold,
-  emissive: colors.brownMid,
+  highlight: colors.tableCream,
+  top: colors.tablePeach,
+  panel: colors.tableWarm,
+  leg: colors.tableBase,
+  gold: colors.tableGold,
+  rose: colors.tableWarm,
+  emissive: colors.cream,
 } as const;
 
 function hexToThree(hex: string) {
@@ -146,67 +147,79 @@ function colorForTablePart(kind: TablePartKind): THREE.Color {
   }
 }
 
-function materialPropsForPart(kind: TablePartKind) {
-  if (kind === "gold") {
-    return { metalness: 0.78, roughness: 0.2, emissiveIntensity: 0.09 };
-  }
-  if (kind === "leg") {
-    return { metalness: 0.48, roughness: 0.34, emissiveIntensity: 0.03 };
-  }
-  if (kind === "top") {
-    return { metalness: 0.44, roughness: 0.24, emissiveIntensity: 0.06 };
-  }
-  return { metalness: 0.52, roughness: 0.28, emissiveIntensity: 0.04 };
+function materialPropsForPart(_kind: TablePartKind) {
+  return { metalness: 0.24, roughness: 0.38, emissiveIntensity: 0.006 };
 }
 
-/** Height + radial bands when GLB is one mesh — legs, panels, top, gold rim */
-function paintMeshVertexColors(mesh: THREE.Mesh) {
+/** GPU height gradient — safe for large single-mesh GLB (no CPU vertex loop) */
+function applyHeightGradientMaterial(mesh: THREE.Mesh) {
   const geometry = mesh.geometry;
-  const position = geometry.attributes.position;
-  if (!position) return;
-
   geometry.computeBoundingBox();
   const box = geometry.boundingBox;
   if (!box) return;
 
   const minY = box.min.y;
-  const maxY = box.max.y;
-  const height = Math.max(maxY - minY, 0.0001);
-  const center = box.getCenter(new THREE.Vector3());
-  const maxRadial = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) * 0.5;
+  const height = Math.max(box.max.y - minY, 0.0001);
+  const leg = new THREE.Color(hexToThree(THEME_TABLE.top));
+  const panel = leg.clone();
+  const top = leg.clone();
+  const highlight = new THREE.Color(hexToThree(THEME_TABLE.highlight));
 
-  const leg = colorForTablePart("leg");
-  const panel = colorForTablePart("panel");
-  const top = colorForTablePart("top");
-  const gold = colorForTablePart("gold");
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    metalness: 0.24,
+    roughness: 0.38,
+    emissive: new THREE.Color(hexToThree(THEME_TABLE.top)),
+    emissiveIntensity: 0.005,
+  });
 
-  const colorsAttr = new Float32Array(position.count * 3);
-  const vertex = new THREE.Vector3();
-  const mix = new THREE.Color();
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uMinY = { value: minY };
+    shader.uniforms.uHeight = { value: height };
+    shader.uniforms.uLegColor = { value: leg };
+    shader.uniforms.uPanelColor = { value: panel };
+    shader.uniforms.uTopColor = { value: top };
+    shader.uniforms.uHighlightColor = { value: highlight };
 
-  for (let i = 0; i < position.count; i++) {
-    vertex.fromBufferAttribute(position, i);
-    const t = (vertex.y - minY) / height;
-    const radial = maxRadial > 0 ? Math.hypot(vertex.x - center.x, vertex.z - center.z) / maxRadial : 0;
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vMajWorldPos;")
+      .replace(
+        "#include <worldpos_vertex>",
+        "#include <worldpos_vertex>\nvMajWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;",
+      );
 
-    if (t < 0.2) {
-      mix.copy(leg);
-    } else if (t > 0.9 && radial > 0.78) {
-      mix.copy(gold);
-    } else if (t > 0.84) {
-      mix.copy(top);
-    } else if (t > 0.52) {
-      mix.copy(panel).lerp(top, (t - 0.52) / 0.32);
-    } else {
-      mix.copy(leg).lerp(panel, (t - 0.2) / 0.32);
-    }
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+varying vec3 vMajWorldPos;
+uniform float uMinY;
+uniform float uHeight;
+uniform vec3 uLegColor;
+uniform vec3 uPanelColor;
+uniform vec3 uTopColor;
+uniform vec3 uHighlightColor;`,
+      )
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+float t = clamp((vMajWorldPos.y - uMinY) / uHeight, 0.0, 1.0);
+vec3 grad = uLegColor;
+if (t > 0.92) {
+  grad = uHighlightColor;
+} else if (t > 0.82) {
+  grad = mix(uTopColor, uHighlightColor, (t - 0.82) / 0.1);
+} else if (t > 0.5) {
+  grad = mix(uPanelColor, uTopColor, (t - 0.5) / 0.32);
+} else if (t > 0.18) {
+  grad = mix(uLegColor, uPanelColor, (t - 0.18) / 0.32);
+}
+diffuseColor.rgb *= grad;`,
+      );
+  };
 
-    colorsAttr[i * 3] = mix.r;
-    colorsAttr[i * 3 + 1] = mix.g;
-    colorsAttr[i * 3 + 2] = mix.b;
-  }
-
-  geometry.setAttribute("color", new THREE.BufferAttribute(colorsAttr, 3));
+  mat.customProgramCacheKey = () => "maj-table-uniform-e8c9a8-v3";
+  mesh.material = mat;
 }
 
 function makeThemedTableMaterial(kind: TablePartKind) {
@@ -224,14 +237,9 @@ function makeThemedTableMaterial(kind: TablePartKind) {
 
 /** Per-part boutique colors — mesh names when available, vertex bands for single-mesh GLB */
 function applyTableSurfaceColor(root: THREE.Object3D) {
-  let meshCount = 0;
-  let namedParts = 0;
-  let vertexPainted = 0;
-
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh || !mesh.visible) return;
-    meshCount += 1;
 
     const name = `${mesh.name} ${mesh.parent?.name || ""}`.toLowerCase();
     if (/glass|pane|window|transparent|diamond|gem|jewel/i.test(name)) return;
@@ -241,40 +249,13 @@ function applyTableSurfaceColor(root: THREE.Object3D) {
 
     const namedPart = resolveTablePartFromName(name);
     if (namedPart) {
-      namedParts += 1;
       const mat = makeThemedTableMaterial(namedPart);
       mesh.material = mat;
       return;
     }
 
-    paintMeshVertexColors(mesh);
-    vertexPainted += 1;
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      vertexColors: true,
-      metalness: 0.46,
-      roughness: 0.24,
-      emissive: new THREE.Color(hexToThree(THEME_TABLE.emissive)),
-      emissiveIntensity: 0.05,
-    });
-    mesh.material = mat;
+    applyHeightGradientMaterial(mesh);
   });
-
-  // #region agent log
-  fetch("http://127.0.0.1:7546/ingest/d5576b71-b65a-49e0-8325-492d4225924a", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "852111" },
-    body: JSON.stringify({
-      sessionId: "852111",
-      runId: "golden-all-products",
-      hypothesisId: "H-parts",
-      location: "JewelryHome.tsx:applyTableSurfaceColor",
-      message: "Part-based table colors",
-      data: { meshCount, namedParts, vertexPainted, palette: THEME_TABLE },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 }
 
 function toTableLocal(
@@ -457,119 +438,9 @@ function fitProductToUniformSize(root: THREE.Object3D, targetHeight: number) {
   root.position.set(-center.x, -fitted.min.y, -center.z);
 }
 
-const GLITTER_COUNT = 22;
-
 interface ProductBounds {
   radius: number;
   height: number;
-}
-
-interface GlitterParticle {
-  x: number;
-  y: number;
-  z: number;
-  vx: number;
-  vy: number;
-  vz: number;
-  life: number;
-  maxLife: number;
-}
-
-function ProductGlitter({
-  active,
-  radius,
-  height,
-}: {
-  active: boolean;
-  radius: number;
-  height: number;
-}) {
-  const pointsRef = useRef<THREE.Points>(null);
-  const intensityRef = useRef(0);
-  const particles = useRef<GlitterParticle[]>(
-    Array.from({ length: GLITTER_COUNT }, () => ({
-      x: 0,
-      y: 0,
-      z: 0,
-      vx: 0,
-      vy: 0,
-      vz: 0,
-      life: 1,
-      maxLife: 1,
-    })),
-  );
-
-  const geometry = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(GLITTER_COUNT * 3), 3));
-    return geo;
-  }, []);
-
-  useFrame((_, delta) => {
-    intensityRef.current = THREE.MathUtils.lerp(
-      intensityRef.current,
-      active ? 1 : 0,
-      Math.min(1, delta * 9),
-    );
-
-    const points = pointsRef.current;
-    if (!points || intensityRef.current < 0.02) return;
-
-    const pos = points.geometry.attributes.position as THREE.BufferAttribute;
-    const arr = pos.array as Float32Array;
-    const spawnRate = intensityRef.current * delta * 26;
-
-    for (let i = 0; i < GLITTER_COUNT; i++) {
-      const p = particles.current[i];
-
-      if (p.life >= p.maxLife) {
-        if (Math.random() < spawnRate) {
-          p.x = (Math.random() - 0.5) * radius * 1.7;
-          p.y = height * (0.5 + Math.random() * 0.5);
-          p.z = (Math.random() - 0.5) * radius * 1.7;
-          p.vx = (Math.random() - 0.5) * 0.14;
-          p.vy = -(0.18 + Math.random() * 0.28);
-          p.vz = (Math.random() - 0.5) * 0.14;
-          p.life = 0;
-          p.maxLife = 0.45 + Math.random() * 0.55;
-        } else {
-          arr[i * 3 + 1] = -100;
-          continue;
-        }
-      }
-
-      p.life += delta;
-      p.x += p.vx * delta;
-      p.y += p.vy * delta;
-      p.z += p.vz * delta;
-      p.vy -= delta * 0.55;
-
-      if (p.life < p.maxLife && p.y > -0.04) {
-        arr[i * 3] = p.x;
-        arr[i * 3 + 1] = p.y;
-        arr[i * 3 + 2] = p.z;
-      } else {
-        p.life = p.maxLife;
-        arr[i * 3 + 1] = -100;
-      }
-    }
-
-    pos.needsUpdate = true;
-  });
-
-  return (
-    <points ref={pointsRef} geometry={geometry} frustumCulled={false}>
-      <pointsMaterial
-        size={0.022}
-        color="#FFF6DC"
-        transparent
-        opacity={0.88}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-        sizeAttenuation
-      />
-    </points>
-  );
 }
 
 const ProductModel = memo(function ProductModel({
@@ -577,14 +448,12 @@ const ProductModel = memo(function ProductModel({
   position,
   rotation,
   displaySize,
-  showGlitter = true,
   textureMax = 1024,
 }: {
   url: string;
   position: [number, number, number];
   rotation: [number, number, number];
   displaySize: number;
-  showGlitter?: boolean;
   textureMax?: number;
 }) {
   const { gl } = useThree();
@@ -666,10 +535,6 @@ const ProductModel = memo(function ProductModel({
         <boxGeometry args={[bounds.radius * 2.8, bounds.height * 1.25, bounds.radius * 2.8]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-
-      {showGlitter && (
-        <ProductGlitter active={hovered} radius={bounds.radius} height={bounds.height} />
-      )}
     </group>
   );
 });
@@ -689,23 +554,17 @@ function TableProducts({
   tablePos: [number, number, number];
   profile: DeviceProfile;
 }) {
-  const { size, viewport } = useThree();
+  const { size } = useThree();
   const maxProducts = getMaxShopProducts(profile);
   const textureMax = profile.lowEnd ? 512 : profile.mobile ? 768 : 1024;
-  const showGlitter = !profile.lowEnd;
   const calib = getShopLayoutCalib(size.width);
   const displaySize = useMemo(
     () => getProductDisplaySize(size.width, size.height, tableTopWidth),
     [size.width, size.height, tableTopWidth],
   );
-  // Calculate a 20px gap in 3D coordinates based on current window pixel width and viewport bounds
-  const gap3D = useMemo(() => {
-    return (20 * viewport.width) / size.width;
-  }, [viewport.width, size.width]);
-
   const layout = useMemo(
     () =>
-      getProductRowLayout(
+      getProductArcLayout(
         surfaceY,
         size.width,
         size.height,
@@ -715,43 +574,13 @@ function TableProducts({
         forwardZ,
         centerX,
         calib.productLift,
-        gap3D,
       ).slice(0, maxProducts),
-    [surfaceY, size.width, size.height, displaySize, tableTopWidth, forwardZ, centerX, maxProducts, calib.productLift, gap3D],
+    [surfaceY, size.width, size.height, displaySize, tableTopWidth, forwardZ, centerX, maxProducts, calib.productLift],
   );
 
   useEffect(() => {
     void import("@/lib/modelPreload").then((mod) => mod.prefetchAllProductBytes());
   }, []);
-
-  useEffect(() => {
-    if (layout.length === 0) return;
-    const first = layout[0];
-    // #region agent log
-    fetch("http://127.0.0.1:7546/ingest/d5576b71-b65a-49e0-8325-492d4225924a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "852111" },
-      body: JSON.stringify({
-        sessionId: "852111",
-        runId: "golden-all-products",
-        hypothesisId: "H-products",
-        location: "JewelryHome.tsx:TableProducts",
-        message: "All products on table",
-        data: {
-          totalProducts: layout.length,
-          maxProducts,
-          displaySize,
-          surfaceY,
-          forwardZ,
-          tableTopWidth,
-          firstWorldPos: first.position,
-          firstLocalPos: toTableLocal(first.position, tablePos),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [layout, displaySize, surfaceY, forwardZ, tablePos, maxProducts]);
 
   return (
     <group>
@@ -762,7 +591,6 @@ function TableProducts({
             position={toTableLocal(item.position, tablePos)}
             rotation={item.rotation}
             displaySize={item.displaySize}
-            showGlitter={showGlitter}
             textureMax={textureMax}
           />
         </Suspense>
@@ -845,32 +673,6 @@ function TableModel({
     const resolved = resolveProductSurfaceMetrics(anchor, found, alignedY, tablePos);
     const worldMetrics = resolved.metrics;
 
-    // #region agent log
-    fetch("http://127.0.0.1:7546/ingest/d5576b71-b65a-49e0-8325-492d4225924a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "852111" },
-      body: JSON.stringify({
-        sessionId: "852111",
-        runId: "parts-products-v2",
-        hypothesisId: "H-position",
-        location: "JewelryHome.tsx:TableModel",
-        message: "Product surface resolved",
-        data: {
-          source: resolved.source,
-          targetNdc: calib.counterBottomNdc,
-          projectedNdcY: alignResult?.projectedNdcY,
-          alignedY,
-          foundSurfaceY: found.surfaceY,
-          worldSurfaceY: worldMetrics.surfaceY,
-          forwardZ: worldMetrics.forwardZ,
-          topWidth: worldMetrics.topWidth,
-          viewportW: size.width,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
     setMetrics(worldMetrics);
     onSurfaceY(worldMetrics.surfaceY);
     onTableMetrics({
@@ -899,6 +701,87 @@ function TableModel({
         />
       )}
     </group>
+  );
+}
+
+/** Warm boutique lighting — key / fill / rim + soft counter glow */
+function TableBoutiqueLights({
+  surfaceY,
+  mobile,
+  lowEnd,
+}: {
+  surfaceY: number | null;
+  mobile: boolean;
+  lowEnd: boolean;
+}) {
+  const spotRef = useRef<THREE.SpotLight>(null);
+  const spotTarget = useRef<THREE.Object3D>(null);
+
+  useLayoutEffect(() => {
+    if (!spotRef.current || !spotTarget.current || surfaceY === null) return;
+    spotRef.current.target = spotTarget.current;
+    spotTarget.current.position.set(0, surfaceY + 0.01, 0.54);
+  }, [surfaceY]);
+
+  return (
+    <>
+      <ambientLight intensity={lowEnd ? 0.5 : 0.46} color={colors.white} />
+      <hemisphereLight args={[colors.tableCream, colors.tablePeach, lowEnd ? 0.3 : 0.38]} />
+
+      {/* Key — overhead boutique window */}
+      <directionalLight
+        position={[0.4, 5.6, 3.1]}
+        intensity={mobile ? 0.88 : 0.96}
+        color={colors.tablePeach}
+      />
+
+      {/* Fill — soft bounce from left */}
+      <directionalLight
+        position={[-1.6, 3.0, 2.2]}
+        intensity={mobile ? 0.34 : 0.4}
+        color={colors.tableCream}
+      />
+
+      {!lowEnd && (
+        <>
+          {/* Rim — gold edge depth */}
+          <directionalLight
+            position={[0.2, 2.4, -2.0]}
+            intensity={mobile ? 0.2 : 0.26}
+            color={colors.tableGold}
+          />
+
+          {surfaceY !== null && (
+            <>
+              <object3D ref={spotTarget} />
+              <spotLight
+                ref={spotRef}
+                position={[0.08, surfaceY + 1.15, 0.78]}
+                intensity={mobile ? 0.62 : 0.78}
+                angle={0.48}
+                penumbra={0.94}
+                distance={6}
+                decay={2}
+                color={colors.tablePeach}
+              />
+            </>
+          )}
+        </>
+      )}
+
+      {surfaceY !== null && (
+        <>
+          {/* Counter surface glow */}
+          <pointLight
+            position={[0, surfaceY + 0.14, 0.57]}
+            intensity={mobile ? 0.52 : 0.64}
+            color={colors.tableWarm}
+            distance={3.4}
+            decay={2}
+          />
+        </>
+      )}
+    </>
   );
 }
 
@@ -938,20 +821,7 @@ function TableScene({
         touches={{ ONE: THREE.TOUCH.ROTATE }}
       />
 
-      <ambientLight intensity={mobile ? 0.72 : 0.68} color="#FFFCF8" />
-      <hemisphereLight args={[colors.white, colors.goldLight, mobile ? 0.38 : 0.34]} />
-
-      <directionalLight
-        position={[0.2, 4.8, 2.8]}
-        intensity={mobile ? 0.68 : 0.72}
-        color="#FFF8F2"
-      />
-
-      <directionalLight
-        position={[-0.35, 2.2, 1.05]}
-        intensity={mobile ? 0.46 : 0.52}
-        color="#FFF6EC"
-      />
+      <TableBoutiqueLights surfaceY={surfaceY} mobile={mobile} lowEnd={profile.lowEnd} />
 
       <Suspense fallback={null}>
         <TableModel
@@ -962,15 +832,6 @@ function TableScene({
           profile={profile}
         />
       </Suspense>
-
-      {surfaceY !== null && (
-        <pointLight
-          position={[0, surfaceY + 0.08, 0.58]}
-          intensity={0.72}
-          color="#FFF9EE"
-          distance={4.2}
-        />
-      )}
 
       {!profile.lowEnd && (
         <ContactShadows
@@ -1081,7 +942,7 @@ export default function JewelryHome({ visible, onTableReady }: JewelryHomeProps)
           gl.setClearColor(0x000000, 0);
           gl.shadowMap.enabled = false;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
-          gl.toneMappingExposure = 1.08;
+          gl.toneMappingExposure = 1.14;
           gl.domElement.addEventListener(
             "webglcontextlost",
             (e) => {

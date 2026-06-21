@@ -1,21 +1,32 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
-  transpilePackages: ["@react-three/fiber", "@react-three/drei", "three-stdlib"],
+  transpilePackages: ["three", "@react-three/fiber", "@react-three/drei", "three-stdlib"],
   webpack: (config, { isServer }) => {
-    const threeModule = path.resolve(__dirname, "node_modules/three/build/three.module.js");
+    // Only customize client bundles — server splitChunks corrupts .next chunk IDs in dev.
+    if (!isServer) {
+      if (config.output) {
+        config.output.chunkLoadTimeout = 300000;
+      }
 
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      three: threeModule,
-    };
-
-    if (!isServer && config.output) {
-      config.output.chunkLoadTimeout = 300000;
+      config.optimization = config.optimization ?? {};
+      const splitChunks = config.optimization.splitChunks ?? {};
+      config.optimization.splitChunks = {
+        ...splitChunks,
+        cacheGroups: {
+          ...splitChunks.cacheGroups,
+          r3f: {
+            test: /[\\/]node_modules[\\/](three|@react-three)[\\/]/,
+            name: "r3f-vendor",
+            chunks: "all",
+            priority: 40,
+            reuseExistingChunk: true,
+          },
+        },
+      };
     }
 
     return config;

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -H 127.0.0.1 -p 3000",
     "dev:clean": "bash scripts/start.sh",
+    "clean": "rm -rf .next node_modules/.cache .turbo",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 3000",
     "lint": "next lint"
@@ -15,7 +16,12 @@
     "next": "^15.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "three": "^0.173.0"
+    "three": "0.173.0"
+  },
+  "overrides": {
+    "stats-gl": {
+      "three": "0.173.0"
+    }
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { LoadingProvider } from "@/context/LoadingContext";
 import Loader from "./Loader";
@@ -11,6 +10,7 @@ import DoorChimeAudio from "./DoorChimeAudio";
 import CursorGlitterTrail from "./CursorGlitterTrail";
 import DoorSceneCanvas from "./DoorSceneCanvas";
 import ModelPreloader from "./ModelPreloader";
+import ShopExperience from "./jewelry/ShopExperience";
 import {
   preloadBoutiqueAudio,
   startBoutiqueAudioFromGesture,
@@ -18,11 +18,6 @@ import {
 } from "@/lib/boutiqueAudio";
 import { getDeviceProfile } from "@/lib/deviceProfile";
 import { useScrollDoorProgress } from "@/hooks/useScrollDoorProgress";
-
-const ShopExperience = dynamic(() => import("./jewelry/ShopExperience"), {
-  ssr: false,
-  loading: () => null,
-});
 
 function ExperienceInner() {
   const [ready, setReady] = useState(false);
