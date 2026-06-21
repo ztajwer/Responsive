@@ -78,10 +78,10 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
         Back to Boutique
       </Link>
 
-      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[1480px] flex-col lg:flex-row lg:items-stretch">
+      <div className="relative mx-auto flex min-h-[110dvh] w-full max-w-[1480px] flex-col lg:flex-row lg:items-stretch">
         {/* Left — 3D product stage */}
-        <section className="relative flex min-h-[52dvh] flex-1 flex-col justify-center px-2 pb-4 pt-14 sm:min-h-[58dvh] sm:px-4 sm:pt-16 lg:min-h-[100dvh] lg:px-8 lg:pb-8 lg:pt-20">
-          <div className="relative mx-auto h-[min(52dvh,520px)] w-full max-w-3xl lg:h-[min(78vh,720px)] lg:max-w-none">
+        <section className="relative flex min-h-[64dvh] flex-1 flex-col justify-center px-2 pb-4 pt-14 sm:min-h-[70dvh] sm:px-4 sm:pt-16 lg:min-h-[105dvh] lg:px-8 lg:pb-10 lg:pt-20">
+          <div className="relative mx-auto h-[min(64dvh,580px)] w-full max-w-3xl sm:h-[min(70dvh,640px)] lg:h-[min(88vh,860px)] lg:max-w-none">
             {mounted ? <ProductDetailCanvas product={product} displaySize={displaySize} /> : null}
           </div>
           <p className="pointer-events-none mt-3 text-center font-sans text-[8px] uppercase tracking-[0.38em] text-maj-brown/42 sm:text-[9px]">
@@ -90,8 +90,8 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
         </section>
 
         {/* Right — glass info panel */}
-        <aside className="product-glass-panel relative z-20 mx-3 mb-24 mt-2 flex shrink-0 flex-col sm:mx-5 lg:mx-0 lg:mb-0 lg:mr-6 lg:mt-0 lg:w-[min(100%,420px)] lg:self-center xl:w-[440px]">
-          <div className="animate-fade-up px-6 py-7 sm:px-8 sm:py-9">
+        <aside className="product-glass-panel relative z-20 mx-3 mb-28 mt-2 flex shrink-0 flex-col sm:mx-5 lg:mx-0 lg:mb-10 lg:mr-6 lg:mt-0 lg:w-[min(100%,420px)] lg:min-h-[min(92dvh,920px)] lg:self-stretch xl:w-[440px]">
+          <div className="animate-fade-up px-6 py-8 sm:px-8 sm:py-10 lg:py-12">
             <p className="font-sans text-[9px] uppercase tracking-[0.48em] text-maj-brown/50 sm:text-[10px]">
               {product.category}
             </p>
