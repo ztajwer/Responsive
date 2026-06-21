@@ -174,7 +174,7 @@ function applyHeightGradientMaterial(mesh: THREE.Mesh) {
   const panel = colorForTablePart("panel");
   const top = colorForTablePart("top");
   const highlight = new THREE.Color(hexToThree(THEME_TABLE.highlight));
-  const sideLight = new THREE.Color(hexToThree(THEME_TABLE.side)).lerp(highlight, 0.38);
+  const sideLight = new THREE.Color(hexToThree(THEME_TABLE.side)).lerp(highlight, 0.22);
 
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -217,24 +217,23 @@ uniform vec3 uSideLightColor;`,
         "#include <color_fragment>",
         `#include <color_fragment>
 float t = clamp((vMajWorldPos.y - uMinY) / uHeight, 0.0, 1.0);
-vec3 bottomTint = mix(uSideLightColor, uHighlightColor, 0.35);
-vec3 grad = bottomTint;
+vec3 grad = uSideLightColor;
 if (t > 0.92) {
   grad = uHighlightColor;
 } else if (t > 0.82) {
   grad = mix(uTopColor, uHighlightColor, (t - 0.82) / 0.1);
 } else if (t > 0.5) {
   grad = mix(uPanelColor, uTopColor, (t - 0.5) / 0.32);
-} else if (t > 0.32) {
-  grad = mix(bottomTint, uPanelColor, (t - 0.32) / 0.18);
+} else if (t > 0.28) {
+  grad = mix(uSideLightColor, uPanelColor, (t - 0.28) / 0.22);
 } else {
-  grad = bottomTint;
+  grad = mix(uSideLightColor, uLegColor, smoothstep(0.0, 0.28, t));
 }
 diffuseColor.rgb *= grad;`,
       );
   };
 
-  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v10";
+  mat.customProgramCacheKey = () => "maj-table-parts-gradient-v9";
   mesh.material = mat;
 }
 
