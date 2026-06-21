@@ -23,7 +23,6 @@ import {
   getProductRowLayout,
 } from "@/lib/productDisplay";
 import { extendGltfLoader, getTableModelUrl } from "@/lib/modelAssets";
-import { colors } from "@/lib/colors";
 import { optimizeModelForGpu } from "@/lib/gpuModelOptimize";
 import { prefetchNextProductBytes, onTableReadyForProducts } from "@/lib/modelPreload";
 import {
@@ -41,8 +40,6 @@ interface JewelryHomeProps {
 
 const tableViewOffsetRef = { width: 0, height: 0, offsetY: 0 };
 
-const TABLE_COLOR = colors.table;
-const TABLE_LEG_COLOR = colors.tableLeg;
 /** Medium table — lower on screen, front view */
 const TABLE_HEIGHT_FRACTION = 0.3;
 const TABLE_CENTER_NDC_TARGET = -0.42;
@@ -90,43 +87,13 @@ function resolveTableViewOffsetY(
   return offsetY;
 }
 
-function applyTableMaterials(root: THREE.Object3D) {
+/** Keep GLB-authored colors; only disable shadows for GPU stability. */
+function prepareOriginalMaterials(root: THREE.Object3D) {
   root.traverse((child) => {
     const mesh = child as THREE.Mesh;
-    if (!mesh.isMesh || !mesh.material) return;
-
+    if (!mesh.isMesh) return;
     mesh.castShadow = false;
     mesh.receiveShadow = false;
-
-    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    mats.forEach((mat) => {
-      const name = (mesh.name + (mat.name || "")).toLowerCase();
-      const isGlass =
-        name.includes("glass") ||
-        ("transparent" in mat && mat.transparent) ||
-        ("opacity" in mat && typeof mat.opacity === "number" && mat.opacity < 0.92);
-
-      if (isGlass && "color" in mat && mat.color instanceof THREE.Color) {
-        mat.color.set("#FFFEF9");
-        if ("metalness" in mat) mat.metalness = 0.02;
-        if ("roughness" in mat) mat.roughness = 0.14;
-        if ("envMapIntensity" in mat) mat.envMapIntensity = 0.15;
-        return;
-      }
-
-      if (!("color" in mat) || !(mat.color instanceof THREE.Color)) return;
-
-      const isLeg = name.includes("leg") || name.includes("base") || name.includes("bottom");
-      mat.color.set(isLeg ? TABLE_LEG_COLOR : TABLE_COLOR);
-      mat.color.offsetHSL(0, -0.02, 0.1);
-
-      if ("emissive" in mat && mat.emissive instanceof THREE.Color) {
-        mat.emissive.set("#FFF6EA").multiplyScalar(isLeg ? 0.015 : 0.022);
-      }
-      if ("metalness" in mat) mat.metalness = isLeg ? 0.02 : 0.015;
-      if ("roughness" in mat) mat.roughness = isLeg ? 0.72 : 0.66;
-      if ("envMapIntensity" in mat) mat.envMapIntensity = 0.08;
-    });
   });
 }
 
@@ -212,53 +179,6 @@ function fitProductToUniformSize(root: THREE.Object3D, targetHeight: number) {
   const fitted = new THREE.Box3().setFromObject(root);
   const center = fitted.getCenter(new THREE.Vector3());
   root.position.set(-center.x, -fitted.min.y, -center.z);
-}
-
-function setupProductMaterials(root: THREE.Object3D) {
-  root.traverse((child) => {
-    const mesh = child as THREE.Mesh;
-    if (!mesh.isMesh || !mesh.material) return;
-    mesh.castShadow = false;
-    mesh.receiveShadow = false;
-
-    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    mats.forEach((mat) => {
-      if ("transparent" in mat && mat.transparent) return;
-
-      const name = (mesh.name + (mat.name || "")).toLowerCase();
-      const isGem =
-        name.includes("gem") ||
-        name.includes("stone") ||
-        name.includes("diamond") ||
-        name.includes("crystal");
-      const isMetal =
-        name.includes("gold") ||
-        name.includes("metal") ||
-        name.includes("ring") ||
-        name.includes("chain") ||
-        ("metalness" in mat && typeof mat.metalness === "number" && mat.metalness > 0.35);
-
-      if ("color" in mat && mat.color instanceof THREE.Color) {
-        mat.color.offsetHSL(0, 0.03, 0.08);
-      }
-
-      if ("metalness" in mat && typeof mat.metalness === "number") {
-        if (isGem) mat.metalness = Math.min(mat.metalness, 0.12);
-        else if (isMetal) mat.metalness = Math.max(mat.metalness, 0.72);
-        else mat.metalness = THREE.MathUtils.clamp(mat.metalness, 0.15, 0.45);
-      }
-
-      if ("roughness" in mat && typeof mat.roughness === "number") {
-        if (isGem) mat.roughness = Math.min(mat.roughness, 0.18);
-        else if (isMetal) mat.roughness = THREE.MathUtils.clamp(mat.roughness, 0.2, 0.35);
-        else mat.roughness = THREE.MathUtils.clamp(mat.roughness, 0.38, 0.58);
-      }
-
-      if ("envMapIntensity" in mat) {
-        mat.envMapIntensity = isGem ? 0.45 : isMetal ? 0.38 : 0.25;
-      }
-    });
-  });
 }
 
 const GLITTER_COUNT = 22;
@@ -404,7 +324,7 @@ const ProductModel = memo(function ProductModel({
 
   useLayoutEffect(() => {
     fitProductToUniformSize(productRoot, displaySize);
-    setupProductMaterials(productRoot);
+    prepareOriginalMaterials(productRoot);
     optimizeModelForGpu(productRoot, textureMax);
 
     const box = new THREE.Box3().setFromObject(productRoot);
@@ -585,7 +505,7 @@ function TableModel({
 
   useLayoutEffect(() => {
     fitTableToSize(tableRoot, targetScale);
-    applyTableMaterials(tableRoot);
+    prepareOriginalMaterials(tableRoot);
     if (profile.lowEnd) {
       optimizeModelForGpu(tableRoot, 512);
     }
@@ -671,7 +591,7 @@ function TableScene({
       />
 
       <ambientLight intensity={mobile ? 0.68 : 0.64} color="#FFFCF8" />
-      <hemisphereLight args={["#FFFCFA", TABLE_COLOR, mobile ? 0.36 : 0.34]} />
+      <hemisphereLight args={["#FFFCFA", "#8A6848", mobile ? 0.36 : 0.34]} />
 
       <directionalLight
         position={[0.2, 4.8, 2.8]}
