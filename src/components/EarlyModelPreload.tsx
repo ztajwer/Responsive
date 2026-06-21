@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { bootFastPipeline } from "@/lib/modelPreload";
+import { bootImagePipeline } from "@/lib/modelPreload";
 
-/** Starts GLB download/parse before Experience hydrates — earliest possible client hook. */
+/** Warm images early — GLB models load after loader (see Loader.tsx). */
 export default function EarlyModelPreload() {
   useEffect(() => {
-    bootFastPipeline();
+    bootImagePipeline();
   }, []);
 
   return null;

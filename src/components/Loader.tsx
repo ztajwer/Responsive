@@ -4,7 +4,8 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import LoaderFallingGlitter from "./LoaderFallingGlitter";
 import {
-  bootFastPipeline,
+  bootImagePipeline,
+  scheduleModelPreloads,
 } from "@/lib/modelPreload";
 import { getDeviceProfile } from "@/lib/deviceProfile";
 
@@ -28,13 +29,14 @@ export default function Loader({ onComplete }: LoaderProps) {
   );
 
   useEffect(() => {
-    bootFastPipeline();
+    bootImagePipeline();
   }, []);
 
   const finish = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
     setDisplayProgress(100);
+    scheduleModelPreloads(400);
     setFadeOut(true);
     setTimeout(() => {
       setVisible(false);
@@ -43,22 +45,26 @@ export default function Loader({ onComplete }: LoaderProps) {
   }, [onComplete]);
 
   useEffect(() => {
-    const startedAt = Date.now();
-    const progressWindow = loaderDurationMs.current - FADE_DURATION_MS;
+    const startedAt = performance.now();
+    const duration = loaderDurationMs.current;
+    const progressWindow = Math.max(400, duration - FADE_DURATION_MS);
+    let raf = 0;
 
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startedAt;
+    const tick = (now: number) => {
+      const elapsed = now - startedAt;
       const t = Math.min(1, elapsed / progressWindow);
       const eased = t * t * (3 - 2 * t);
-      setDisplayProgress(eased * 100);
+      setDisplayProgress(Math.max(1, eased * 100));
 
-      if (elapsed >= loaderDurationMs.current) {
-        clearInterval(interval);
+      if (elapsed >= duration) {
         finish();
+        return;
       }
-    }, 30);
+      raf = requestAnimationFrame(tick);
+    };
 
-    return () => clearInterval(interval);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [finish]);
 
   if (!visible) return null;

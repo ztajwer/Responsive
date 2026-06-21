@@ -3,7 +3,8 @@ import { getDeviceProfile } from "./deviceProfile";
 
 const bytePrefetched = new Set<string>();
 const gltfTriggered = new Set<string>();
-let pipelineStarted = false;
+let imagePipelineStarted = false;
+let modelPipelineScheduled = false;
 let shopStarted = false;
 let dreiPromise: Promise<typeof import("@react-three/drei")> | null = null;
 
@@ -21,7 +22,7 @@ function collectShopGlbUrls(): string[] {
   return [...new Set([tableUrl, ...getProductModelUrls()])];
 }
 
-/** Parallel HTTP warm — browser multiplexes on 35Mbps+ links. */
+/** Parallel HTTP warm — browser multiplexes on fast links. */
 function warmHttpCache(url: string) {
   if (bytePrefetched.has(url) || typeof window === "undefined") return;
   bytePrefetched.add(url);
@@ -37,22 +38,25 @@ function triggerGltfPreload(
   useGLTF.preload(url, false, false, extendGltfLoader);
 }
 
-/** Table first, then all products in parallel (or light stagger on low-end). */
+/** Table first, then products — never on critical path before loader UI. */
 async function preloadAllShopGltfParallel() {
   const { useGLTF } = await getDrei();
   const urls = collectShopGlbUrls();
   const tableUrl = getTableModelUrl();
   const productUrls = urls.filter((url) => url !== tableUrl);
 
-  urls.forEach(warmHttpCache);
+  warmHttpCache(tableUrl);
 
   triggerGltfPreload(useGLTF, tableUrl);
 
   const { lowEnd } = getDeviceProfile();
-  const staggerMs = lowEnd ? 80 : 0;
+  const staggerMs = lowEnd ? 120 : 40;
 
   productUrls.forEach((url, index) => {
-    window.setTimeout(() => triggerGltfPreload(useGLTF, url), staggerMs * index);
+    window.setTimeout(() => {
+      warmHttpCache(url);
+      triggerGltfPreload(useGLTF, url);
+    }, staggerMs * (index + 1));
   });
 }
 
@@ -76,35 +80,68 @@ export function prefetchNextProductBytes(index: number) {
   prefetchProductBytes(index);
 }
 
-/** Loader first paint — parallel download + parse for table + all 5 products. */
-export function bootFastPipeline() {
-  if (pipelineStarted) return;
-  pipelineStarted = true;
+/** Images only — safe during loader (no 500MB GLB parse on main thread). */
+export function bootImagePipeline() {
+  if (imagePipelineStarted) return;
+  imagePipelineStarted = true;
 
   for (const src of [...LOADER_IMAGES, ...DOOR_IMAGES, ...SHOP_IMAGES]) {
     preloadImage(src);
   }
+}
 
-  void getDrei();
-  void preloadAllShopGltfParallel();
+export function scheduleIdle(task: () => void) {
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(() => task(), { timeout: 800 });
+    return;
+  }
+  window.setTimeout(task, 200);
+}
+
+/** Defer GLB download/parse until after loader animation completes. */
+export function scheduleModelPreloads(delayMs = 0) {
+  if (modelPipelineScheduled) return;
+  modelPipelineScheduled = true;
+
+  const run = () => {
+    scheduleIdle(() => {
+      void preloadAllShopGltfParallel();
+    });
+  };
+
+  if (delayMs > 0) {
+    window.setTimeout(run, delayMs);
+  } else {
+    run();
+  }
+}
+
+/** Loader + door — images immediately, models after UI is interactive. */
+export function bootFastPipeline() {
+  bootImagePipeline();
+  scheduleModelPreloads(3000);
 }
 
 export function prefetchShopBytesOnDoor() {
-  bootFastPipeline();
-  for (const src of SHOP_IMAGES) preloadImage(src);
+  bootImagePipeline();
+  prefetchTableBytes();
+  scheduleModelPreloads(0);
 }
 
 export function startShopModelLoads() {
   if (shopStarted) return;
   shopStarted = true;
-  bootFastPipeline();
+  bootImagePipeline();
+  scheduleModelPreloads(0);
 }
 
 export function prefetchAllProductBytes() {
   const urls = collectShopGlbUrls();
-  urls.forEach(warmHttpCache);
   void getDrei().then(({ useGLTF }) => {
-    urls.forEach((url) => triggerGltfPreload(useGLTF, url));
+    urls.forEach((url) => {
+      warmHttpCache(url);
+      triggerGltfPreload(useGLTF, url);
+    });
   });
 }
 
@@ -113,7 +150,7 @@ export function onTableReadyForProducts() {
 }
 
 export function bootShopModels() {
-  bootFastPipeline();
+  startShopModelLoads();
 }
 
 export function preloadProductModels(): Promise<void> {
@@ -127,12 +164,4 @@ export function preloadDoorImages() {
 
 export function preloadShopImages() {
   for (const src of SHOP_IMAGES) preloadImage(src);
-}
-
-export function scheduleIdle(task: () => void) {
-  if (typeof window.requestIdleCallback === "function") {
-    window.requestIdleCallback(() => task(), { timeout: 600 });
-    return;
-  }
-  window.setTimeout(task, 150);
 }

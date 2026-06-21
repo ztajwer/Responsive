@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { getProductById } from "@/lib/products";
-import { isWhatsAppConfigured, openWhatsAppInquiry } from "@/lib/whatsapp";
+import { getBoutiquePhoneDisplay, openWhatsAppInquiry } from "@/lib/whatsapp";
 
 function WhatsAppIcon() {
   return (
@@ -19,35 +19,38 @@ export default function WhatsAppPlugin() {
   const [visible, setVisible] = useState(false);
   const productId = pathname?.split("/").pop() ?? "";
   const product = getProductById(productId);
-  const whatsappReady = isWhatsAppConfigured();
+  const phoneDisplay = getBoutiquePhoneDisplay();
 
   useEffect(() => {
-    if (!whatsappReady || !product) return;
-    const timer = window.setTimeout(() => setVisible(true), 500);
+    if (!product) return;
+    const timer = window.setTimeout(() => setVisible(true), 600);
     return () => window.clearTimeout(timer);
-  }, [whatsappReady, product]);
+  }, [product]);
 
   const handleOpen = useCallback(() => {
     if (!product) return;
     openWhatsAppInquiry(product.title);
   }, [product]);
 
-  if (!whatsappReady || !product) return null;
+  if (!product) return null;
 
   return (
     <div
-      className="pointer-events-none fixed bottom-5 right-4 z-[80] sm:bottom-7 sm:right-6"
+      className="pointer-events-none fixed bottom-5 right-4 z-[80] flex flex-col items-end gap-2 sm:bottom-7 sm:right-6"
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(12px)",
-        transition: "opacity 0.45s ease, transform 0.45s ease",
+        transform: visible ? "translateY(0)" : "translateY(14px)",
+        transition: "opacity 0.5s ease, transform 0.5s ease",
       }}
     >
+      <p className="pointer-events-none rounded-full border border-maj-gold/20 bg-white/90 px-3 py-1.5 font-sans text-[9px] tracking-[0.12em] text-maj-brown/65 shadow-sm backdrop-blur-sm">
+        {phoneDisplay}
+      </p>
       <button
         type="button"
         onClick={handleOpen}
         aria-label={`WhatsApp inquiry about ${product.title}`}
-        className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_10px_28px_rgba(37,211,102,0.38)] transition hover:scale-[1.04] hover:shadow-[0_12px_32px_rgba(37,211,102,0.45)] active:scale-[0.98] sm:h-16 sm:w-16"
+        className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_12px_32px_rgba(37,211,102,0.4)] ring-4 ring-white/80 transition hover:scale-[1.05] hover:shadow-[0_14px_38px_rgba(37,211,102,0.48)] active:scale-[0.98] sm:h-16 sm:w-16"
       >
         <WhatsAppIcon />
       </button>
