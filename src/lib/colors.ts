@@ -18,7 +18,9 @@ export const colors = {
   tablePeach: "#D2A57E",
   tableWarm: "#D0AD88",
   tableGold: "#D4AF37",
-  tableBase: "#C8A282",
-  /** Lower side panels — lighter than base/legs */
-  tableSide: "#DAB89A",
+  tableBase: "#A48668",
+  /** Bottom gradient anchor — niche se blend */
+  tableShade: "#A48668",
+  /** Lower side transition toward panel */
+  tableSide: "#B89578",
 } as const;

@@ -109,7 +109,7 @@ const THEME_TABLE = {
   highlight: colors.tableCream,
   top: colors.tablePeach,
   panel: colors.tableWarm,
-  leg: colors.tableSide,
+  leg: colors.tableShade,
   side: colors.tableSide,
   gold: colors.tableGold,
   rose: colors.tableWarm,
@@ -174,7 +174,7 @@ function applyHeightGradientMaterial(mesh: THREE.Mesh) {
   const panel = colorForTablePart("panel");
   const top = colorForTablePart("top");
   const highlight = new THREE.Color(hexToThree(THEME_TABLE.highlight));
-  const sideLight = new THREE.Color(hexToThree(THEME_TABLE.side)).lerp(highlight, 0.22);
+  const bottom = new THREE.Color(hexToThree(THEME_TABLE.leg));
 
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -191,7 +191,7 @@ function applyHeightGradientMaterial(mesh: THREE.Mesh) {
     shader.uniforms.uPanelColor = { value: panel };
     shader.uniforms.uTopColor = { value: top };
     shader.uniforms.uHighlightColor = { value: highlight };
-    shader.uniforms.uSideLightColor = { value: sideLight };
+    shader.uniforms.uBottomColor = { value: bottom };
 
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", "#include <common>\nvarying vec3 vMajWorldPos;")
@@ -211,7 +211,7 @@ uniform vec3 uLegColor;
 uniform vec3 uPanelColor;
 uniform vec3 uTopColor;
 uniform vec3 uHighlightColor;
-uniform vec3 uSideLightColor;`,
+uniform vec3 uBottomColor;`,
       )
       .replace(
         "#include <color_fragment>",
